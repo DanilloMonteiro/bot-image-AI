@@ -1,0 +1,276 @@
+﻿<!DOCTYPE html>
+<!--
+  UX Design Validation Report — skeleton template.
+
+  This file is a starter the synthesis pass fills in directly. There is no
+  substitution engine. The LLM:
+    1. Reads {doc_workspace}/review-rubric.md and every review-{lens}.md from
+       additional reviewers.
+    2. Copies this skeleton.
+    3. Replaces the placeholder content (everything between TEMPLATE markers)
+       with the consolidated review, preserving the structure and CSS.
+    4. Writes the result to {doc_workspace}/validation-report.html.
+    5. Writes a markdown twin to {doc_workspace}/validation-report.md.
+
+  Visual rules the LLM must preserve:
+    - The container width, the color tokens, the typography.
+    - One dimension = one collapsible <section class="dimension">.
+    - Verdict pill uses the verdict-* class matching its judgment.
+    - Severity badge uses the badge-sev-* class matching its level.
+    - Each extra reviewer (accessibility, adversarial, etc.) gets its own
+      collapsible section below the rubric dimensions.
+    - The footer always shows the artifact paths and timestamp.
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>UX Design Validation: ImageSystem</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --border: #e7e5e4;
+    --text: #1c1917;
+    --muted: #78716c;
+
+    --verdict-strong: #16a34a;
+    --verdict-adequate: #65a30d;
+    --verdict-thin: #d97706;
+    --verdict-broken: #dc2626;
+
+    --sev-low: #64748b;
+    --sev-medium: #ca8a04;
+    --sev-high: #ea580c;
+    --sev-critical: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 15px;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 24px 64px; }
+
+  header.report-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .title h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .title .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+
+  .synthesis {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--muted);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    font-size: 15.5px;
+  }
+  .synthesis p { margin: 0 0 10px; }
+  .synthesis p:last-child { margin-bottom: 0; }
+
+  .dimension-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .dim-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .dim-card .dim-name { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .dim-card .dim-verdict { font-size: 14px; font-weight: 600; }
+
+  section.dimension, section.reviewer-section { margin-bottom: 14px; }
+  section.dimension details, section.reviewer-section details {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  section summary {
+    padding: 14px 20px;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  section summary::-webkit-details-marker { display: none; }
+  section summary::before {
+    content: "▸";
+    display: inline-block;
+    color: var(--muted);
+    transition: transform 0.15s ease;
+  }
+  section details[open] summary::before { transform: rotate(90deg); }
+  section summary h2 {
+    display: inline;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    flex: 1;
+  }
+  .verdict-pill {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: white;
+  }
+  .verdict-strong { background: var(--verdict-strong); }
+  .verdict-adequate { background: var(--verdict-adequate); }
+  .verdict-thin { background: var(--verdict-thin); }
+  .verdict-broken { background: var(--verdict-broken); }
+
+  .dim-body { padding: 4px 20px 18px; }
+  .dim-judgment { color: var(--text); font-size: 14.5px; }
+  .dim-judgment p { margin: 0 0 10px; }
+
+  .findings-list { padding: 0 20px 4px; }
+  article.finding {
+    padding: 14px 0;
+    border-top: 1px solid var(--border);
+  }
+  article.finding:first-child { border-top: none; }
+  article.finding header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .badge {
+    font-size: 10.5px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+  }
+  .badge-sev-low { background: rgba(100, 116, 139, 0.12); color: var(--sev-low); }
+  .badge-sev-medium { background: rgba(202, 138, 4, 0.14); color: var(--sev-medium); }
+  .badge-sev-high { background: rgba(234, 88, 12, 0.14); color: var(--sev-high); }
+  .badge-sev-critical { background: rgba(220, 38, 38, 0.14); color: var(--sev-critical); }
+  .finding-title { margin: 0; font-size: 15px; font-weight: 500; flex: 1; min-width: 200px; }
+  .finding-location { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; color: var(--muted); }
+  .finding-note, .finding-fix { margin-top: 6px; font-size: 14px; }
+  .finding-fix strong { color: var(--muted); font-weight: 500; }
+
+  .reviewer-source {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  .mechanical {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-top: 24px;
+    font-size: 14px;
+  }
+  .mechanical h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .mechanical ul { margin: 0; padding-left: 20px; }
+  .mechanical li { margin-bottom: 4px; color: var(--text); }
+
+  footer.report-footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  footer .meta { display: flex; gap: 24px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header class="report-header"><div class="title"><h1>ImageSystem — relatório de validação UX</h1><div class="subtitle">_bmad-output/initiative-brief-ensaios-ia-whatsapp/ux-ensaios-ia-whatsapp/</div></div></header>
+    <div class="synthesis">
+      <p>A dupla registra o limite aprovado pela usuária — a primeira mensagem recebida no WhatsApp — e preserva as principais restrições de privacidade, pagamento, prévia e handoff. Ainda não é um contrato pronto para implementação: contraste de links, inventário de componentes, fluxos de falha e estados operacionais precisam de mais definição.</p>
+      <p>A revisão de acessibilidade e consentimento também identificou que o gate da foto precisa cobrir os dados e fornecedores envolvidos e explicar claramente o destino e o tratamento da imagem.</p>
+    </div>
+    <div class="dimension-summary">
+      <div class="dim-card"><div class="dim-name">Flow coverage</div><div class="dim-verdict" style="color: var(--verdict-thin)">thin</div></div>
+      <div class="dim-card"><div class="dim-name">Token completeness</div><div class="dim-verdict" style="color: var(--verdict-thin)">thin</div></div>
+      <div class="dim-card"><div class="dim-name">Component coverage</div><div class="dim-verdict" style="color: var(--verdict-thin)">thin</div></div>
+      <div class="dim-card"><div class="dim-name">State coverage</div><div class="dim-verdict" style="color: var(--verdict-thin)">thin</div></div>
+      <div class="dim-card"><div class="dim-name">Visual reference coverage</div><div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div></div>
+      <div class="dim-card"><div class="dim-name">Bloat &amp; overspecification</div><div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div></div>
+      <div class="dim-card"><div class="dim-name">Inheritance discipline</div><div class="dim-verdict" style="color: var(--verdict-thin)">thin</div></div>
+      <div class="dim-card"><div class="dim-name">Shape fit</div><div class="dim-verdict" style="color: var(--verdict-adequate)">adequate</div></div>
+    </div>
+
+    <section class="dimension"><details open><summary><h2>Flow coverage</h2><span class="verdict-pill verdict-thin">thin</span></summary><div class="dim-body"><div class="dim-judgment"><p>UJ-1/UJ-2 e CAP-1–CAP-7/FR-1–FR-44 foram comparados com os cinco fluxos; o início aprovado no WhatsApp está correto, mas a forma e a rastreabilidade estão incompletas.</p></div></div><div class="findings-list">
+      <article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">IDs, passos e recuperação das jornadas</h3><span class="finding-location">EXPERIENCE.md, Key Flows 1–5</span></header><div class="finding-note">UJ-1/UJ-2 não aparecem como IDs; três fluxos não têm passos numerados e nenhum explicita recuperação de falha.</div><div class="finding-fix"><strong>Fix:</strong> Preservar os IDs e títulos-fonte nos fluxos mapeados e adicionar passos, clímax e recuperação aplicável.</div></article>
+      <article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Rastreabilidade de requisitos</h3><span class="finding-location">EXPERIENCE.md, Key Flows</span></header><div class="finding-note">Não há mapa entre capacidades/requisitos e fluxos, então cobertura não pode ser confirmada por um consumidor.</div><div class="finding-fix"><strong>Fix:</strong> Acrescentar referências compactas por fluxo ou uma pequena matriz; excluir detalhes puramente técnicos das narrativas da cliente.</div></article>
+    </div></details></section>
+
+    <section class="dimension"><details open><summary><h2>Token completeness</h2><span class="verdict-pill verdict-thin">thin</span></summary><div class="dim-body"><div class="dim-judgment"><p>Tokens e referências resolvem, mas as combinações de contraste de texto não foram declaradas nem aprovadas.</p></div></div><div class="findings-list">
+      <article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Contraste de links abaixo do mínimo esperado</h3><span class="finding-location">DESIGN.md, components.link</span></header><div class="finding-note">{colors.verde} (#58C411) tem contraste 2,25:1 em branco e 1,82:1 em {colors.fundo}.</div><div class="finding-fix"><strong>Fix:</strong> Usar cor de texto que atinja o alvo nas superfícies previstas, ou reservar o token para ênfase não textual e definir um tratamento acessível de link.</div></article>
+    </div></details></section>
+
+    <section class="dimension"><details open><summary><h2>Component coverage</h2><span class="verdict-pill verdict-thin">thin</span></summary><div class="dim-body"><div class="dim-judgment"><p>Há regras comportamentais úteis, mas os nomes e a cobertura visual/comportamental não formam um inventário alinhado.</p></div></div><div class="findings-list">
+      <article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Inventário de componentes desalinhado</h3><span class="finding-location">DESIGN.md, Components; EXPERIENCE.md, Component Patterns</span></header><div class="finding-note">Seis tokens visuais não têm entradas comportamentais correspondentes; cartão de escalonamento, detalhe de atendimento, estados do pedido e operações não têm regras visuais correspondentes.</div><div class="finding-fix"><strong>Fix:</strong> Alinhar um inventário de componentes e especificar regras visuais e comportamentais, ou identificar componentes nativos/herdados e suas fontes.</div></article>
+    </div></details></section>
+
+    <section class="dimension"><details open><summary><h2>State coverage</h2><span class="verdict-pill verdict-thin">thin</span></summary><div class="dim-body"><div class="dim-judgment"><p>Os principais gates financeiros, de consentimento, geração e handoff estão presentes; estados de falha e recuperação por superfície ainda faltam.</p></div></div><div class="findings-list">
+      <article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Estados operacionais e recuperação ausentes</h3><span class="finding-location">EXPERIENCE.md, IA e State Patterns</span></header><div class="finding-note">Faltam estados de inbox vazio/carregando/erro/offline/acesso negado/conflito de responsável e recuperação para foto inválida, falha de Pix e envio indisponível.</div><div class="finding-fix"><strong>Fix:</strong> Definir estado, recuperação e status verdadeiro por superfície.</div></article>
+    </div></details></section>
+
+    <section class="dimension"><details><summary><h2>Visual reference coverage</h2><span class="verdict-pill verdict-adequate">adequate</span></summary><div class="dim-body"><div class="dim-judgment"><p>Não há mockups locais; a referência AbacatePay está nomeada e os princípios adotados e excluídos estão descritos.</p></div></div><div class="findings-list">
+      <article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Link inline e precedência dos spines</h3><span class="finding-location">DESIGN.md, Brand &amp; Style; EXPERIENCE.md, Inspiration</span></header><div class="finding-note">A referência não tem link inline junto à justificativa, e os documentos não declaram uma vez que os spines prevalecem sobre artefatos visuais.</div><div class="finding-fix"><strong>Fix:</strong> Adicionar o link do guia e uma declaração única de precedência.</div></article>
+    </div></details></section>
+
+    <section class="dimension"><details><summary><h2>Bloat &amp; overspecification</h2><span class="verdict-pill verdict-adequate">adequate</span></summary><div class="dim-body"><div class="dim-judgment"><p>O conteúdo está focado, mas algumas regras comerciais e de privacidade se repetem em várias seções.</p></div></div><div class="findings-list">
+      <article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Repetição de regras</h3><span class="finding-location">EXPERIENCE.md, Foundation a Key Flows</span></header><div class="finding-note">Preço, retenção, consentimento, semelhança e primeira resposta humana aparecem em vários lugares, aumentando o custo de sincronização.</div><div class="finding-fix"><strong>Fix:</strong> Manter cada regra uma vez como fonte canônica e usar os fluxos para mostrar o ponto de decisão e seu efeito.</div></article>
+    </div></details></section>
+
+    <section class="dimension"><details open><summary><h2>Inheritance discipline</h2><span class="verdict-pill verdict-thin">thin</span></summary><div class="dim-body"><div class="dim-judgment"><p>Fontes e tokens resolvem. Os nomes de jornada e o glossário não são herdados ou apontados de forma explícita.</p></div></div><div class="findings-list">
+      <article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">IDs de jornada e glossário compartilhado</h3><span class="finding-location">EXPERIENCE.md, Key Flows; PRD §2.3 e §3</span></header><div class="finding-note">IDs/títulos de UJ não são herdados literalmente e não há glossário compartilhado ou ponteiro para ele.</div><div class="finding-fix"><strong>Fix:</strong> Preservar UJ-1/UJ-2 e apontar para o glossário do PRD ou registrar um glossário comum curto.</div></article>
+    </div></details></section>
+
+    <section class="dimension"><details><summary><h2>Shape fit</h2><span class="verdict-pill verdict-adequate">adequate</span></summary><div class="dim-body"><div class="dim-judgment"><p>DESIGN.md e EXPERIENCE.md seguem a forma requerida; Responsive &amp; Platform e Inspiration &amp; Anti-patterns têm justificativa para este produto.</p></div></div></details></section>
+
+    <section class="reviewer-section"><details open><summary><h2>Acessibilidade e consentimento</h2><span class="reviewer-source">review-accessibility-consent.md</span></summary><div class="dim-body"><div class="dim-judgment"><p>O bloqueio de coleta e o consentimento separado são bons fundamentos. Os achados abaixo tratam de entendimento do processamento, decisões de fluxo e acessibilidade do painel; esta revisão não conclui conformidade legal.</p></div></div><div class="findings-list">
+      <article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Destino e tratamento da foto não aparecem antes do consentimento</h3><span class="finding-location">EXPERIENCE.md, Foundation e Component Patterns</span></header><div class="finding-note">“Processada com IA” não esclarece fornecedor externo, retenção pelo fornecedor nem reutilização da imagem.</div><div class="finding-fix"><strong>Fix:</strong> Manter o gate fechado até fornecedor e condições serem conhecidos e validados; informar processamento externo e limites aprovados.</div></article>
+      <article class="finding"><header><span class="badge badge-sev-high">high</span><h3 class="finding-title">Gate de retenção não cobre todos os dados e cópias</h3><span class="finding-location">EXPERIENCE.md, Foundation e State Patterns</span></header><div class="finding-note">O gate não lista resultados, conversa/consentimento, backups ou cópias de fornecedores.</div><div class="finding-fix"><strong>Fix:</strong> Exigir matriz aprovada por tipo de dado, prazo, marco inicial, cópias, exclusão e exceções; resumir antes do consentimento.</div></article>
+      <article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Resposta à recusa, dúvida e desistência</h3><span class="finding-location">EXPERIENCE.md, State Patterns, Interaction Primitives e Flow 1</span></header><div class="finding-note">Não está definido como tratar resposta ambígua, recusa, pedido de explicação ou mudança de ideia antes da geração.</div><div class="finding-fix"><strong>Fix:</strong> Só habilitar processamento após confirmação inequívoca; pausar sem bloquear perguntas e aplicar regra aprovada de descarte à desistência.</div></article>
+      <article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Elegibilidade e arquivo incompatível</h3><span class="finding-location">EXPERIENCE.md, IA e Flow 1</span></header><div class="finding-note">Idade e titularidade são perguntadas juntas; faltam saídas para “não”, “não sei” e foto incompatível.</div><div class="finding-fix"><strong>Fix:</strong> Confirmar os fatos separadamente, não inferir idade pela aparência e impedir que arquivo reprovado siga à geração/fornecedor.</div></article>
+      <article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Confirmação de pedido de privacidade</h3><span class="finding-location">EXPERIENCE.md, State Patterns e Flow 5</span></header><div class="finding-note">Não há confirmação imediata à cliente nem checklist no painel para verificar originais, cópias e backups.</div><div class="finding-fix"><strong>Fix:</strong> Confirmar recebimento, informar apenas a primeira resposta já aprovada e registrar a verificação das cópias antes de encerrar.</div></article>
+      <article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Contraste do token de link</h3><span class="finding-location">DESIGN.md, components.link</span></header><div class="finding-note">O token verde de link falha contraste em branco e na superfície estrutural; achado sobreposto ao de Token completeness.</div><div class="finding-fix"><strong>Fix:</strong> Usar cor acessível, sublinhado e foco visível; validar estados e texto de botão.</div></article>
+      <article class="finding"><header><span class="badge badge-sev-medium">medium</span><h3 class="finding-title">Acessibilidade básica do painel web</h3><span class="finding-location">EXPERIENCE.md, Accessibility Floor e Responsive &amp; Platform</span></header><div class="finding-note">Não especifica operação por teclado, foco visível, ampliação/refluxo ou alvos de interação.</div><div class="finding-fix"><strong>Fix:</strong> Declarar alvo de acessibilidade, teclado/foco, conteúdo sem corte com ampliação, contraste de controles e larguras prioritárias.</div></article>
+      <article class="finding"><header><span class="badge badge-sev-low">low</span><h3 class="finding-title">Rota de ajuda humana difícil de descobrir</h3><span class="finding-location">EXPERIENCE.md, Component Patterns e Flow 5</span></header><div class="finding-note">A cliente pode não saber que uma solicitação escrita será reconhecida.</div><div class="finding-fix"><strong>Fix:</strong> Mostrar em contexto uma frase literal (“quero falar com uma pessoa”), sem menu persistente, e validar pelas regras atuais do WhatsApp.</div></article>
+    </div></details></section>
+
+    <div class="mechanical"><h3>Mechanical notes</h3><ul>
+      <li>Fontes locais resolvem; todas as referências de tokens estão definidas; os valores de cor têm hex válido.</li>
+      <li>Não há arquivos em imports/, .working/, mockups/ ou wireframes/; portanto não há referências visuais locais órfãs.</li>
+      <li>O contraste do link aparece em duas lentes; ambos registros foram mantidos como achados independentes.</li>
+      <li>Contagem combinada: 0 críticos, 4 altos, 9 médios, 3 baixos.</li>
+    </ul></div>
+    <footer class="report-footer"><div class="meta"><span>Rubrica: review-rubric.md</span><span>Extra: review-accessibility-consent.md</span><span>Gerado: 2026-10-09T14:56:27-03:00</span></div></footer>
+  </div>
+</body>
+</html>
+

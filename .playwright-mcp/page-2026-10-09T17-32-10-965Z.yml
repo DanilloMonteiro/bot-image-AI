@@ -1,0 +1,482 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - navigation "Principal" [ref=e4]:
+        - generic [ref=e5]:
+          - link "AbacatePay, início" [ref=e6] [cursor=pointer]:
+            - /url: /
+          - list [ref=e16]:
+            - listitem [ref=e17]:
+              - link "Preço" [ref=e18] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/pricing
+            - listitem [ref=e19]:
+              - link "Integração" [ref=e20] [cursor=pointer]:
+                - /url: "#integracao"
+            - listitem [ref=e21]:
+              - link "Blog" [ref=e22] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/blog
+            - listitem [ref=e23]:
+              - link "Docs" [ref=e24] [cursor=pointer]:
+                - /url: https://docs.abacatepay.com/pages/start/welcome
+        - generic [ref=e25]:
+          - link "Entrar" [ref=e26] [cursor=pointer]:
+            - /url: https://app.abacatepay.com/login
+          - link "Criar conta grátis" [ref=e27] [cursor=pointer]:
+            - /url: https://app.abacatepay.com/login
+      - generic [ref=e28]:
+        - heading "AbacatePay, o gateway do builder brasileiro" [level=1] [ref=e29]
+        - generic [ref=e31]:
+          - generic [ref=e33]:
+            - text: Eu quero fazer
+            - 'button "Valor da venda: R$ 3.000,00. Alterar" [ref=e34] [cursor=pointer]':
+              - generic [ref=e35]:
+                - generic [ref=e36]: R$ 3.000,00
+                - generic [aria-hidden] [ref=e37]:
+                  - generic [ref=e38]: R
+                  - generic [ref=e39]: $
+                  - generic [ref=e42]:
+                    - generic [ref=e43]: "0"
+                    - generic [ref=e44]: "1"
+                    - generic [ref=e45]: "2"
+                    - generic [ref=e46]: "3"
+                    - generic [ref=e47]: "4"
+                    - generic [ref=e48]: "5"
+                    - generic [ref=e49]: "6"
+                    - generic [ref=e50]: "7"
+                    - generic [ref=e51]: "8"
+                    - generic [ref=e52]: "9"
+                  - generic [ref=e53]: .
+                  - generic [ref=e55]:
+                    - generic [ref=e56]: "0"
+                    - generic [ref=e57]: "1"
+                    - generic [ref=e58]: "2"
+                    - generic [ref=e59]: "3"
+                    - generic [ref=e60]: "4"
+                    - generic [ref=e61]: "5"
+                    - generic [ref=e62]: "6"
+                    - generic [ref=e63]: "7"
+                    - generic [ref=e64]: "8"
+                    - generic [ref=e65]: "9"
+                  - generic [ref=e67]:
+                    - generic [ref=e68]: "0"
+                    - generic [ref=e69]: "1"
+                    - generic [ref=e70]: "2"
+                    - generic [ref=e71]: "3"
+                    - generic [ref=e72]: "4"
+                    - generic [ref=e73]: "5"
+                    - generic [ref=e74]: "6"
+                    - generic [ref=e75]: "7"
+                    - generic [ref=e76]: "8"
+                    - generic [ref=e77]: "9"
+                  - generic [ref=e79]:
+                    - generic [ref=e80]: "0"
+                    - generic [ref=e81]: "1"
+                    - generic [ref=e82]: "2"
+                    - generic [ref=e83]: "3"
+                    - generic [ref=e84]: "4"
+                    - generic [ref=e85]: "5"
+                    - generic [ref=e86]: "6"
+                    - generic [ref=e87]: "7"
+                    - generic [ref=e88]: "8"
+                    - generic [ref=e89]: "9"
+                  - generic [ref=e90]: ","
+                  - generic [ref=e92]:
+                    - generic [ref=e93]: "0"
+                    - generic [ref=e94]: "1"
+                    - generic [ref=e95]: "2"
+                    - generic [ref=e96]: "3"
+                    - generic [ref=e97]: "4"
+                    - generic [ref=e98]: "5"
+                    - generic [ref=e99]: "6"
+                    - generic [ref=e100]: "7"
+                    - generic [ref=e101]: "8"
+                    - generic [ref=e102]: "9"
+                  - generic [ref=e104]:
+                    - generic [ref=e105]: "0"
+                    - generic [ref=e106]: "1"
+                    - generic [ref=e107]: "2"
+                    - generic [ref=e108]: "3"
+                    - generic [ref=e109]: "4"
+                    - generic [ref=e110]: "5"
+                    - generic [ref=e111]: "6"
+                    - generic [ref=e112]: "7"
+                    - generic [ref=e113]: "8"
+                    - generic [ref=e114]: "9"
+            - text: usando
+            - 'button "Forma de pagamento: Pix. Alterar" [ref=e117] [cursor=pointer]': Pix
+            - text: na AbacatePay, então vou pagar de taxa
+            - generic [ref=e121]:
+              - generic [ref=e122]: R$ 0,80
+              - generic [aria-hidden] [ref=e123]:
+                - generic [ref=e124]: R
+                - generic [ref=e125]: $
+                - generic [ref=e128]:
+                  - generic [ref=e129]: "0"
+                  - generic [ref=e130]: "1"
+                  - generic [ref=e131]: "2"
+                  - generic [ref=e132]: "3"
+                  - generic [ref=e133]: "4"
+                  - generic [ref=e134]: "5"
+                  - generic [ref=e135]: "6"
+                  - generic [ref=e136]: "7"
+                  - generic [ref=e137]: "8"
+                  - generic [ref=e138]: "9"
+                - generic [ref=e139]: ","
+                - generic [ref=e141]:
+                  - generic [ref=e142]: "0"
+                  - generic [ref=e143]: "1"
+                  - generic [ref=e144]: "2"
+                  - generic [ref=e145]: "3"
+                  - generic [ref=e146]: "4"
+                  - generic [ref=e147]: "5"
+                  - generic [ref=e148]: "6"
+                  - generic [ref=e149]: "7"
+                  - generic [ref=e150]: "8"
+                  - generic [ref=e151]: "9"
+                - generic [ref=e153]:
+                  - generic [ref=e154]: "0"
+                  - generic [ref=e155]: "1"
+                  - generic [ref=e156]: "2"
+                  - generic [ref=e157]: "3"
+                  - generic [ref=e158]: "4"
+                  - generic [ref=e159]: "5"
+                  - generic [ref=e160]: "6"
+                  - generic [ref=e161]: "7"
+                  - generic [ref=e162]: "8"
+                  - generic [ref=e163]: "9"
+            - text: .
+          - paragraph [ref=e164]
+          - paragraph [ref=e165]:
+            - text: Você recebe
+            - strong [ref=e166]:
+              - generic [ref=e167]:
+                - generic [ref=e168]: R$ 2.999,20
+                - generic [aria-hidden] [ref=e169]:
+                  - generic [ref=e170]: R
+                  - generic [ref=e171]: $
+                  - generic [ref=e174]:
+                    - generic [ref=e175]: "0"
+                    - generic [ref=e176]: "1"
+                    - generic [ref=e177]: "2"
+                    - generic [ref=e178]: "3"
+                    - generic [ref=e179]: "4"
+                    - generic [ref=e180]: "5"
+                    - generic [ref=e181]: "6"
+                    - generic [ref=e182]: "7"
+                    - generic [ref=e183]: "8"
+                    - generic [ref=e184]: "9"
+                  - generic [ref=e185]: .
+                  - generic [ref=e187]:
+                    - generic [ref=e188]: "0"
+                    - generic [ref=e189]: "1"
+                    - generic [ref=e190]: "2"
+                    - generic [ref=e191]: "3"
+                    - generic [ref=e192]: "4"
+                    - generic [ref=e193]: "5"
+                    - generic [ref=e194]: "6"
+                    - generic [ref=e195]: "7"
+                    - generic [ref=e196]: "8"
+                    - generic [ref=e197]: "9"
+                  - generic [ref=e199]:
+                    - generic [ref=e200]: "0"
+                    - generic [ref=e201]: "1"
+                    - generic [ref=e202]: "2"
+                    - generic [ref=e203]: "3"
+                    - generic [ref=e204]: "4"
+                    - generic [ref=e205]: "5"
+                    - generic [ref=e206]: "6"
+                    - generic [ref=e207]: "7"
+                    - generic [ref=e208]: "8"
+                    - generic [ref=e209]: "9"
+                  - generic [ref=e211]:
+                    - generic [ref=e212]: "0"
+                    - generic [ref=e213]: "1"
+                    - generic [ref=e214]: "2"
+                    - generic [ref=e215]: "3"
+                    - generic [ref=e216]: "4"
+                    - generic [ref=e217]: "5"
+                    - generic [ref=e218]: "6"
+                    - generic [ref=e219]: "7"
+                    - generic [ref=e220]: "8"
+                    - generic [ref=e221]: "9"
+                  - generic [ref=e222]: ","
+                  - generic [ref=e224]:
+                    - generic [ref=e225]: "0"
+                    - generic [ref=e226]: "1"
+                    - generic [ref=e227]: "2"
+                    - generic [ref=e228]: "3"
+                    - generic [ref=e229]: "4"
+                    - generic [ref=e230]: "5"
+                    - generic [ref=e231]: "6"
+                    - generic [ref=e232]: "7"
+                    - generic [ref=e233]: "8"
+                    - generic [ref=e234]: "9"
+                  - generic [ref=e236]:
+                    - generic [ref=e237]: "0"
+                    - generic [ref=e238]: "1"
+                    - generic [ref=e239]: "2"
+                    - generic [ref=e240]: "3"
+                    - generic [ref=e241]: "4"
+                    - generic [ref=e242]: "5"
+                    - generic [ref=e243]: "6"
+                    - generic [ref=e244]: "7"
+                    - generic [ref=e245]: "8"
+                    - generic [ref=e246]: "9"
+            - text: ", R$ 34,90 a mais do que no Stripe."
+          - link "Começar a vender agora" [ref=e247] [cursor=pointer]:
+            - /url: https://app.abacatepay.com/login
+        - paragraph [ref=e250]:
+          - strong [ref=e251]: Sem mensalidade.
+          - text: Aprovação não leva semanas.
+      - generic [ref=e252]:
+        - paragraph [aria-hidden]:
+          - generic: As métricas que todo founder precisa!
+        - img "Painel da AbacatePay com receita, MRR, assinantes e churn do mês" [ref=e254]
+  - main [ref=e255]:
+    - region [ref=e256]:
+      - generic [ref=e257]:
+        - generic [ref=e258]:
+          - heading "R$ 0,80 por Pix. Fixo." [level=2] [ref=e259]:
+            - generic [ref=e260]: R$ 0,80
+            - text: por Pix. Fixo.
+          - paragraph [ref=e261]: Vendeu R$ 10 ou R$ 10.000, a taxa é a mesma,sem letrinha pequena, sem migué.
+        - list [ref=e262]:
+          - listitem [ref=e263]:
+            - paragraph [ref=e265]: R$ 0 de mensalidade, nadinha mesmo.
+          - listitem [ref=e266]:
+            - paragraph [ref=e268]: Sem plano, sem essa de “fale com vendas”.
+          - listitem [ref=e269]:
+            - paragraph [ref=e271]: Poucos minutospra integrar.
+          - listitem [ref=e272]:
+            - paragraph [ref=e274]: API, +15 SDKs ou cola o llms.txt na tua IA.
+        - generic [ref=e275]:
+          - link "Calcular quanto você recebe" [ref=e276] [cursor=pointer]:
+            - /url: "#simulador"
+          - paragraph [ref=e280]:
+            - strong [ref=e281]: Sem mensalidade.
+            - text: Aprovação não leva semanas.
+    - region [ref=e282]:
+      - generic [ref=e283]:
+        - figure "E muito mais..." [ref=e284]:
+          - img "Conversa no celular em que a IA lê abacatepay.com/llms.txt e começa a integração; logos de ChatGPT, Claude, DeepSeek, Grok e Lovable" [ref=e286]
+        - generic [ref=e288]:
+          - heading "Integre do jeito que você constrói." [level=2] [ref=e289]
+          - paragraph [ref=e290]: Code, vibe-code ou no-code dá no mesmo. Se você programa, tem SDK em Python, JavaScript, PHP, Ruby e +11 linguagens. Se travar, o suporte responde antes do teu café esfriar. Se você constrói com IA, copia o texto abaixo, cola no Claude, ChatGPT, Lovable ou na sua ferramenta favorita e deixa ela integrar por você.
+          - generic [ref=e293]:
+            - generic [ref=e294]: abacatepay.com/llms.txt
+            - button "Copiar" [ref=e295] [cursor=pointer]
+          - generic [ref=e299]:
+            - link "Integrar com AI" [ref=e300] [cursor=pointer]:
+              - /url: https://app.abacatepay.com/login
+            - link "Ver documentação" [ref=e304] [cursor=pointer]:
+              - /url: https://docs.abacatepay.com/pages/start/welcome
+    - region [ref=e308]:
+      - generic [ref=e309]:
+        - generic [ref=e310]:
+          - heading "Um painel que fala a tua língua." [level=2] [ref=e311]
+          - paragraph [ref=e312]: Gateway comum te mostra transação, o painel da Abacate te mostra MRR, churn e o que realmente decide se o teu produto vive ou morre. Você abre e sabe em 5 segundos se o mês tá bom, sem exportar CSV, sem montar planilha.
+          - generic [ref=e313]:
+            - link "Criar conta grátis" [ref=e314] [cursor=pointer]:
+              - /url: https://app.abacatepay.com/login
+            - paragraph [ref=e315]:
+              - strong [ref=e316]: Sem mensalidade.
+              - text: Aprovação não leva semanas.
+        - img "Painel da AbacatePay mostrando MRR de R$ 3.500, cancelamentos, churn e evolução do ticket médio" [ref=e320]
+    - region [ref=e321]:
+      - generic [ref=e322]:
+        - generic [ref=e323]:
+          - heading "Simule e veja quanto você recebe de verdade." [level=2] [ref=e324]
+          - paragraph [ref=e325]:
+            - text: R$ 0,80 por Pix, sem mensalidade, e R$ 2,50 por boleto pago. Compare os valores na
+            - link "calculadora completa" [ref=e326] [cursor=pointer]:
+              - /url: https://www.abacatepay.com/calculadora-de-taxas
+            - text: .
+        - generic [ref=e329]:
+          - group "Forma de recebimento" [ref=e330]:
+            - button "Pix" [pressed] [ref=e332] [cursor=pointer]
+            - button "Boleto" [ref=e336] [cursor=pointer]
+            - button "Cartão" [ref=e339] [cursor=pointer]
+          - generic [ref=e343]:
+            - generic [ref=e344]: Quanto você vende?
+            - generic [ref=e345]:
+              - generic [ref=e346]: R$
+              - textbox "Valor da venda em reais" [ref=e347]: 600,00
+          - generic [ref=e348]:
+            - paragraph [ref=e349]:
+              - text: Você recebe no Pix na
+              - img "AbacatePay" [ref=e350]
+            - paragraph [ref=e351]: R$599,20
+            - paragraph [ref=e352]: Taxa fixa de R$ 0,80 por transação
+            - separator [ref=e353]
+            - generic [ref=e354]:
+              - generic [ref=e355]:
+                - term [ref=e356]: Taxa
+                - definition [ref=e357]: − R$ 0,80
+              - generic [ref=e358]:
+                - term [ref=e359]: Taxa efetiva
+                - definition [ref=e360]: 0,13%
+        - link "Integrar com AI" [ref=e361] [cursor=pointer]:
+          - /url: https://app.abacatepay.com/login
+    - region [ref=e365]:
+      - generic [ref=e367]:
+        - heading "E tudo isso com um suporte que não te deixa na mão." [level=2] [ref=e368]
+        - paragraph [ref=e369]: Na Abacate, você conta com diferentes canais para receber atendimento rápido e eficiente.
+        - link "Entrar em contato" [ref=e370] [cursor=pointer]:
+          - /url: https://wa.me/5511955021468
+      - img "Time de suporte da AbacatePay sorrindo no escritório" [ref=e376]
+    - region [ref=e377]:
+      - generic [ref=e378]:
+        - generic [ref=e379]:
+          - heading "Tem dúvidas? Relaxa, nós temos as respostas." [level=2] [ref=e380]
+          - paragraph [ref=e381]: Selecionamos algumas dúvidas que recebemos com frequência sobre nossos serviços, elas podem ser úteis para você!
+        - generic [ref=e382]:
+          - group [ref=e383]:
+            - generic "Preciso de CNPJ?" [ref=e384] [cursor=pointer]
+            - paragraph [ref=e386]: Sim. Por enquanto a Abacate é só pra CNPJ. MEI serve.
+          - group [ref=e387]:
+            - generic "Tem split de pagamento?" [ref=e388] [cursor=pointer]
+          - group [ref=e390]:
+            - generic "Quanto tempo pra minha conta ser aprovada?" [ref=e391] [cursor=pointer]
+          - group [ref=e393]:
+            - generic "Quais formas de pagamento eu recebo?" [ref=e394] [cursor=pointer]
+        - generic [ref=e396]:
+          - link "Criar conta grátis" [ref=e397] [cursor=pointer]:
+            - /url: https://app.abacatepay.com/login
+          - paragraph [ref=e398]:
+            - strong [ref=e399]: Sem mensalidade.
+            - text: Aprovação não leva semanas.
+    - region [ref=e400]:
+      - generic [ref=e401]:
+        - heading "Você leu até aqui. Tá interessado né?" [level=2] [ref=e402]
+        - paragraph [ref=e403]: Cadastro leva 2 minutos, a aprovação não leva semanas, e a primeira cobrança você cria hoje ainda.
+        - generic [ref=e404]:
+          - link "Vai, clica logo nesse botão" [ref=e405] [cursor=pointer]:
+            - /url: https://app.abacatepay.com/login
+          - paragraph [ref=e406]:
+            - strong [ref=e407]: Sem mensalidade.
+            - text: Aprovação não leva semanas.
+      - img "Ilustração renascentista com anjos e um abacate numa concha" [ref=e410]
+  - contentinfo [ref=e412]:
+    - generic [ref=e413]:
+      - navigation "Rodapé" [ref=e414]:
+        - generic [ref=e415]:
+          - paragraph [ref=e416]: Website
+          - list [ref=e417]:
+            - listitem [ref=e418]:
+              - link "Blog" [ref=e419] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/blog
+            - listitem [ref=e420]:
+              - link "Design" [ref=e421] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/design
+            - listitem [ref=e422]:
+              - link "Documentação" [ref=e423] [cursor=pointer]:
+                - /url: https://docs.abacatepay.com/pages/start/welcome
+            - listitem [ref=e424]:
+              - link "Integrações" [ref=e425] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/integracoes
+            - listitem [ref=e426]:
+              - link "Preços" [ref=e427] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/pricing
+            - listitem [ref=e428]:
+              - link "Calculadora de taxas" [ref=e429] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/calculadora-de-taxas
+            - listitem [ref=e430]:
+              - link "Por que a Abacate?" [ref=e431] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/why
+            - listitem [ref=e432]:
+              - link "Status dos serviços" [ref=e433] [cursor=pointer]:
+                - /url: https://statuspage.incident.io/abacate-pay
+        - generic [ref=e434]:
+          - paragraph [ref=e435]: Produtos
+          - list [ref=e436]:
+            - listitem [ref=e437]:
+              - link "PIX" [ref=e438] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/pix
+            - listitem [ref=e439]:
+              - link "Boleto" [ref=e440] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/boleto
+            - listitem [ref=e441]:
+              - link "Link de pagamento" [ref=e442] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/link-de-pagamento
+            - listitem [ref=e443]:
+              - link "Checkout transparente" [ref=e444] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/checkout
+        - generic [ref=e445]:
+          - paragraph [ref=e446]: Para quem
+          - list [ref=e447]:
+            - listitem [ref=e448]:
+              - link "Saas" [ref=e449] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/para/saas
+            - listitem [ref=e450]:
+              - link "Micro-Saas" [ref=e451] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/para/micro-saas
+            - listitem [ref=e452]:
+              - link "E-commerce" [ref=e453] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/para/ecommerce
+            - listitem [ref=e454]:
+              - link "Marketplaces" [ref=e455] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/para/marketplaces
+            - listitem [ref=e456]:
+              - link "Criadores" [ref=e457] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/para/criadores-de-conteudo
+            - listitem [ref=e458]:
+              - link "Apps" [ref=e459] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/para/apps
+            - listitem [ref=e460]:
+              - link "Educação" [ref=e461] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/para/educacao
+        - generic [ref=e462]:
+          - paragraph [ref=e463]: AI & Devs
+          - list [ref=e464]:
+            - listitem [ref=e465]:
+              - link "AI Agents" [ref=e466] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/ai-agents
+            - listitem [ref=e467]:
+              - link "Desenvolvedores" [ref=e468] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/desenvolvedores
+            - listitem [ref=e469]:
+              - link "Open source" [ref=e470] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/open-source
+            - listitem [ref=e471]:
+              - link "LLMs.txt" [ref=e472] [cursor=pointer]:
+                - /url: https://abacatepay.com/llms.txt
+        - generic [ref=e473]:
+          - paragraph [ref=e474]: Suporte
+          - list [ref=e475]:
+            - listitem [ref=e476]:
+              - link "ajuda@abacatepay.com" [ref=e477] [cursor=pointer]:
+                - /url: mailto:ajuda@abacatepay.com
+            - listitem [ref=e478]:
+              - link "Falar com suporte" [ref=e479] [cursor=pointer]:
+                - /url: https://wa.me/5511955021468
+        - generic [ref=e480]:
+          - paragraph [ref=e481]: Legal
+          - list [ref=e482]:
+            - listitem [ref=e483]:
+              - link "Termos de Uso e Política de Privacidade" [ref=e484] [cursor=pointer]:
+                - /url: https://www.abacatepay.com/termos
+      - separator [ref=e485]
+      - generic [ref=e486]:
+        - generic [ref=e487]:
+          - img "AbacatePay" [ref=e488]
+          - paragraph [ref=e497]: "Copyright © 2026 AbacatePay LLC - CNPJ: 58.271.413/0001-90"
+        - list [ref=e498]:
+          - listitem [ref=e499]:
+            - link "AbacatePay no X (Twitter)" [ref=e500] [cursor=pointer]:
+              - /url: https://x.com/abacatepay
+          - listitem [ref=e503]:
+            - link "AbacatePay no LinkedIn" [ref=e504] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/abacatepay/
+          - listitem [ref=e507]:
+            - link "AbacatePay no Instagram" [ref=e508] [cursor=pointer]:
+              - /url: https://www.instagram.com/abacatepay/
+          - listitem [ref=e514]:
+            - link "AbacatePay no Discord" [ref=e515] [cursor=pointer]:
+              - /url: https://discord.gg/4wy6czVsv8
+      - paragraph [ref=e518]:
+        - text: A AbacatePay é uma plataforma de tecnologia que intermedeia pagamentos e
+        - strong [ref=e519]: não é instituição financeira nem de pagamento
+        - text: . O processamento, a liquidação e a custódia dos valores são realizados por instituições parceiras autorizadas pelo Banco Central do Brasil, conforme os
+        - link "Termos de Uso e Política de Privacidade" [ref=e520] [cursor=pointer]:
+          - /url: https://www.abacatepay.com/termos
+        - text: .

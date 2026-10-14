@@ -1,0 +1,77 @@
+﻿[[entry]]
+id = 1
+type = "story"
+title = "Caminho durável do Next.js ao worker em staging"
+description = "Após os sócios compararem e aprovarem hospedagem, banco e fila por custo, privacidade e controle de gastos, estabelece o monólito modular TypeScript e um fluxo durável do Next.js ao worker em staging, entregue pela CI."
+verify = "A CI implanta staging, uma chamada de smoke cria uma tarefa durável, o worker a conclui com o mesmo identificador de correlação, a convenção/teste de arquitetura impede acesso direto de um módulo à persistência de outro e a escolha com suas evidências fica registrada na arquitetura."
+covers = ["F1", "F2", "F3"]
+after = []
+hitl = true
+risk = "medium"
+notes = ["Deixar o provedor em aberto até validar custo e privacidade."]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Tarefas duráveis retomam sem duplicar efeitos"
+description = "Fortalece o caminho do worker com deduplicação, tentativas limitadas e falhas terminais recuperáveis, mantendo estado durável após reinício; a mesma chave de idempotência protege o efeito de teste sem implementar integrações de pagamento ou imagem."
+verify = "Ao repetir um evento e reiniciar o worker durante a execução, o destino de teste registra um único efeito comprometido pela mesma chave de idempotência, e uma falha terminal continua consultável para recuperação."
+covers = ["F3"]
+after = [1]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 3
+type = "story"
+title = "Ambientes e dados operacionais ficam isolados"
+description = "Separa segredos e configurações de staging e produção, protege banco e endpoints segundo os limites de rede escolhidos e evita cache compartilhado para rotas privadas; documenta que a mídia de E6 deve usar acesso privado, sem provisionar armazenamento de fotos neste épico."
+verify = "Checks de deploy confirmam segredos distintos por ambiente, webhook somente HTTPS, banco inacessível publicamente, rotas privadas sem cache compartilhado e política de armazenamento de mídia privada para o consumidor E6."
+covers = ["F1", "F2"]
+after = [2]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 4
+type = "story"
+title = "Falhas e uso de plataforma ficam observáveis"
+description = "Expõe estado, correlação, retentativas, falhas e sinais de uso/custo de hospedagem, banco, fila e execução para auditoria e futura reconciliação pelo módulo Orçamento, sem registrar dados pessoais ou bytes de mídia, e publica um contrato versionado para esse consumo."
+verify = "Uma tarefa de teste e uma falha aparecem com estado e correlação, existe ao menos um sinal observável de uso/custo por recurso selecionado via telemetria do provedor ou fonte de reconciliação manual documentada quando não houver API, o contrato versionado está documentado para Orçamento sem depender desse módulo e dados pessoais ou bytes de mídia não aparecem nos logs."
+covers = ["F3", "F5"]
+after = [3]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 5
+type = "story"
+title = "Backups do estado durável podem ser restaurados"
+description = "Configura e documenta o backup do estado durável no provedor aprovado e demonstra a restauração isolada com dados sintéticos, sem inventar metas RTO/RPO nem prazos de retenção de dados de clientes."
+verify = "Uma cópia sintética do estado de teste é restaurada em ambiente isolado, e a tarefa restaurada pode ser consultada e processada pelo smoke path."
+covers = ["F4"]
+after = [3]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 6
+type = "story"
+title = "Base web e worker é implantada em produção"
+description = "Libera a base Next.js e worker Node no ambiente de produção aprovado com HTTPS, segredos isolados, persistência privada, backup testado, monitoramento e contrato de sinais de custo; mantém tráfego de clientes e fotos reais fechado até os gates dos épicos consumidores."
+verify = "O deploy de produção passa pelo smoke path, apresenta saúde e sinais de uso/custo, mantém banco privado e não habilita rota pública de cliente ou mídia antes da aprovação da política de dados."
+covers = ["F2", "F4", "F5"]
+after = [4, 5]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 7
+type = "story"
+title = "Refactor sweep da base de plataforma"
+description = "Remove apenas dívida técnica e findings adiados durante as histórias da plataforma, preservando os comportamentos e contratos já verificados."
+verify = "Os checks de qualidade e integração definidos para a base passam após a limpeza, e nenhum finding de revisão da plataforma permanece sem resolução ou registro."
+covers = ["F1", "F2", "F3", "F4", "F5"]
+after = [1, 2, 3, 4, 5, 6]
+hitl = false
+risk = "medium"

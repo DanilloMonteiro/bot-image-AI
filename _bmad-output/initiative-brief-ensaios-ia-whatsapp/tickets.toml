@@ -1,0 +1,65 @@
+[[epic]]
+id = 1
+slug = "epic-platform-foundation"
+title = "Base de plataforma do piloto"
+covers = []
+
+[[epic]]
+id = 2
+slug = "epic-pilot-budget-data-policy"
+title = "Orçamento do piloto e política de dados"
+covers = ["CAP-7", "CAP-2"]
+after = [{ epic = 1, needs = "ambiente de produção, worker, observabilidade e integração mínima para controlar custos e políticas" }]
+
+[[epic]]
+id = 3
+slug = "epic-whatsapp-conversation-consent"
+title = "Conversa no WhatsApp e consentimento"
+covers = ["CAP-1", "CAP-2"]
+after = [{ epic = 2, needs = "política aprovada e informada antes de solicitar ou processar fotos" }]
+
+[[epic]]
+id = 4
+slug = "epic-orders-pix"
+title = "Pedidos e pagamento Pix"
+covers = ["CAP-1", "CAP-3"]
+after = [
+  { epic = 2, needs = "saldo e reserva de custo verificáveis antes de autorizar operações pagas" },
+  { epic = 3, needs = "conversa, cliente e consentimento vinculáveis ao pedido" }
+]
+
+[[epic]]
+id = 5
+slug = "epic-partner-operations"
+title = "Operação dos sócios e suporte"
+covers = ["CAP-2", "CAP-6", "CAP-7"]
+after = [
+  { epic = 2, needs = "controle de orçamento e política de dados visível à operação" },
+  { epic = 3, needs = "conversas, consentimento e handoff humano" },
+  { epic = 4, needs = "contexto de pedido, pagamento e exceções" }
+]
+
+[[epic]]
+id = 6
+slug = "epic-portrait-fulfillment"
+title = "Processamento e entrega dos retratos"
+covers = ["CAP-2", "CAP-4"]
+after = [
+  { epic = 2, needs = "política de dados e reserva de custo aprovadas" },
+  { epic = 3, needs = "consentimento e elegibilidade registrados" },
+  { epic = 4, needs = "pedido pago autenticado antes da geração faturável" },
+  { epic = 5, needs = "rota operacional para aprovações, falhas e pedidos de dados" }
+]
+
+[[epic]]
+id = 7
+slug = "epic-preview-approval"
+title = "Prévia opcional com aprovação"
+covers = ["CAP-5"]
+after = [
+  { epic = 2, needs = "reserva de custo e limites configuráveis" },
+  { epic = 3, needs = "cliente, conversa e consentimento vinculáveis à solicitação" },
+  { epic = 4, needs = "pacote e caminho normal de pagamento definidos para conversão" },
+  { epic = 5, needs = "aprovação autenticada e auditável por um sócio" },
+  { epic = 6, needs = "processamento de imagem e entrega disponíveis" }
+]

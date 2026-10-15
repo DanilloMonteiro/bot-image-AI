@@ -98,10 +98,10 @@ Monólito modular TypeScript em um único código-base. A cliente percorre a jor
 | TypeScript | 6.0.3 | Baseline conservadora para produção; CLI de TypeScript 7 do Next é experimental ([docs](https://nextjs.org/docs/app/api-reference/config/next-config-js/useTypeScriptCli)) |
 | Node.js | 24 LTS | Runtime recomendado para aplicação e worker |
 | Next.js | 16.4.0 | Framework escolhido; versão estável verificada em 2026-10-09 ([fonte](https://nextjs.org/blog)) |
-| PostgreSQL | 18.6 | Candidato pesquisado; ainda não adotado |
-| pg-boss | 12.37.1 | Candidato ainda não adotado; release atual do projeto ([release](https://github.com/timgit/pg-boss/releases/tag/12.37.1)) |
+| PostgreSQL | 18.6 | Adotado para o smoke local/CI da história 1.1; provedor externo pendente |
+| pg-boss | 12.37.1 | Adotado para fila transacional do smoke local/CI da história 1.1 ([release](https://github.com/timgit/pg-boss/releases/tag/12.37.1)) |
 
-O armazenamento durável, a fila e a ferramenta de migração continuam decisões abertas; cumprir AD-3 sem depender de PostgreSQL ou pg-boss.
+Decisão de 2026-10-15: PostgreSQL e pg-boss formam a base técnica local da história 1.1. O registro do smoke e o job são gravados na mesma transação. A escolha não autoriza hospedagem externa, região ou gasto; a ferramenta de migração e o procedimento de backup/restauração ainda serão definidos antes da operação externa.
 
 ## Structural Seed
 
@@ -157,7 +157,7 @@ src/
 
 ## Deferred
 
-- **Armazenamento, fila e migrações:** escolher antes da primeira implementação de esquema; validar durabilidade, transações/outbox, operação, backups, custo e privacidade. PostgreSQL 18.6 e pg-boss 12.37.1 são candidatos, não decisões.
+- **Migrações e operação externa do armazenamento:** escolher migrações versionadas e validar durabilidade, transações, backups, restauração, custo e privacidade antes de implantar fora do ambiente local/CI. PostgreSQL 18.6 e pg-boss 12.37.1 foram adotados apenas como base técnica local.
 - **Hospedagem, região e controles do custo da plataforma:** antes da implantação; validar custo total e limite efetivo de gasto dentro do teto de R$500.
 - **Provedores de WhatsApp, Pix, IA e objetos:** antes das integrações; validar preço, segurança, contratos, disponibilidade e termos de privacidade/retenção.
 - **Regras vigentes do WhatsApp:** antes do lançamento, validar opt-in/opt-out, janela de atendimento, templates aprovados, custos e elegibilidade de mensagens de entrega, feedback e follow-up.

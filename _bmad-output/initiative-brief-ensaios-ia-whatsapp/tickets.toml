@@ -1,0 +1,27 @@
+[[epic]]
+id = 1
+slug = "epic-base-segura-custos"
+title = "Base segura do piloto e controle de custos"
+covers = ["CAP-7"]
+after = []
+
+[[epic]]
+id = 2
+slug = "epic-conversas-consentimento"
+title = "Conversas WhatsApp e consentimento"
+covers = ["CAP-1", "CAP-2", "CAP-6"]
+after = [{ epic = 1, needs = "aplicação e worker implantados, eventos/outbox duráveis e casos públicos de orçamento" }]
+
+[[epic]]
+id = 3
+slug = "epic-pedidos-retratos"
+title = "Pedidos Pix e entrega de retratos"
+covers = ["CAP-1", "CAP-2", "CAP-3", "CAP-4", "CAP-5"]
+after = [{ epic = 1, needs = "reservas/reconciliação de orçamento e eventos duráveis" }, { epic = 2, needs = "identidade estável, consentimento verificável e handoff de conversa" }]
+
+[[epic]]
+id = 4
+slug = "epic-operacao-socios"
+title = "Operação dos sócios: prévias, atendimento e privacidade"
+covers = ["CAP-2", "CAP-5", "CAP-6", "CAP-7"]
+after = [{ epic = 1, needs = "casos públicos de orçamento, bloqueios e snapshot somente leitura" }, { epic = 2, needs = "handoff durável de conversa e direitos de privacidade" }, { epic = 3, needs = "estado de prévia/entrega e casos de operação de retrato" }]

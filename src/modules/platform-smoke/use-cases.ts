@@ -5,7 +5,8 @@ export class PlatformSmoke {
 
   accept(): Promise<SmokeTask> { return this.repository.create(); }
   lookup(id: string): Promise<SmokeTask | null> { return this.repository.find(id); }
-  start(id: string): Promise<void> { return this.repository.markProcessing(id); }
-  complete(id: string): Promise<void> { return this.repository.markCompleted(id); }
-  fail(id: string, errorCode: string): Promise<void> { return this.repository.markFailed(id, errorCode); }
+  start(id: string, attempt: number): Promise<boolean> { return this.repository.markProcessing(id, attempt); }
+  complete(id: string, attempt: number): Promise<boolean> { return this.repository.complete(id, attempt); }
+  failAttempt(id: string, attempt: number): Promise<void> { return this.repository.markAttemptFailed(id, attempt); }
+  retry(id: string) { return this.repository.retry(id); }
 }

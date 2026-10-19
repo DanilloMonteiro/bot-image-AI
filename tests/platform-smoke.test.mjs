@@ -159,6 +159,7 @@ test('retry HTTP handler authorizes before repository access and rejects invalid
       retry,
     );
     assert.equal(unauthorized.status, 401);
+    assert.equal(unauthorized.headers.get('Cache-Control'), 'no-store');
     assert.equal(repositoryCalls, 0);
 
     const authorizedRequest = () => new Request('http://local', {
@@ -168,6 +169,7 @@ test('retry HTTP handler authorizes before repository access and rejects invalid
       authorizedRequest(), Promise.resolve({ id: 'invalid' }), retry,
     );
     assert.equal(invalid.status, 404);
+    assert.equal(invalid.headers.get('Cache-Control'), 'no-store');
     assert.equal(repositoryCalls, 0);
 
     const queuedTask = await smoke.accept();
@@ -176,6 +178,7 @@ test('retry HTTP handler authorizes before repository access and rejects invalid
       authorizedRequest(), Promise.resolve({ id: queuedTask.id }), retry,
     );
     assert.equal(queued.status, 409);
+    assert.equal(queued.headers.get('Cache-Control'), 'no-store');
     assert.deepEqual(await queued.json(), { error: 'not_retryable' });
     assert.equal(repositoryCalls, 1);
     assert.deepEqual(repository.jobs.get(queuedTask.id), queuedJobBefore);

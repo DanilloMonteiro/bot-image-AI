@@ -13,6 +13,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check:boundaries
+      - run: npm run check:platform-isolation
       - run: npm run build
       - run: node --test tests/*.test.mjs
       - run: npm run smoke:local

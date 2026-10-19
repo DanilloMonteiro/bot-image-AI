@@ -19,8 +19,11 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
 
 async function request(url, options = {}) {
-  try { return await fetch(url, { ...options, signal: AbortSignal.timeout(5000) }); }
+  let response;
+  try { response = await fetch(url, { ...options, signal: AbortSignal.timeout(5000) }); }
   catch { return null; }
+  assert(response.headers.get('Cache-Control')?.toLowerCase() === 'no-store', `private response must disable caching: ${new URL(url).pathname}`);
+  return response;
 }
 async function waitFor(check, label, timeoutMs = 60000) {
   const deadline = Date.now() + timeoutMs;

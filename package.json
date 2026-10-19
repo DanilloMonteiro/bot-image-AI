@@ -8,6 +8,7 @@
     "start:web": "next start -H 0.0.0.0",
     "start:worker": "node dist/worker/index.js",
     "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:platform-isolation": "node scripts/check-platform-isolation.mjs",
     "test": "npm run build && node --test tests/*.test.mjs",
     "smoke:local": "node scripts/smoke-local.mjs"
   },

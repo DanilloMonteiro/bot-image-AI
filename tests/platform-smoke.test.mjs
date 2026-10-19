@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
 
 const require = createRequire(import.meta.url);
 const { PlatformSmoke } = require('../dist/modules/platform-smoke/use-cases.js');
@@ -9,6 +10,7 @@ const { mapSmokeRetryResult } = require('../dist/adapters/http/smoke-retry-respo
 const { handleSmokeRetryRequest } = require('../dist/adapters/http/smoke-retry-handler.js');
 const { emitPlatformEvent } = require('../dist/adapters/console/platform-events.js');
 const { handlePlatformSmokeJob } = require('../dist/worker/platform-smoke-handler.js');
+const { isPlatformUsageRecordV1 } = require('../dist/contracts/platform-usage/v1.js');
 
 const taskId = 'e5ea330c-48e5-44c2-b383-7382890524be';
 
@@ -358,4 +360,91 @@ test('a failed attempt is reported with unknown state when its durable state upd
     ['smoke_started', 'processing'],
     ['smoke_attempt_failed', 'unknown'],
   ]);
+});
+
+test('platform usage v1 records manual period and unknown cost without converting it to zero', () => {
+  const record = {
+    version: 'v1',
+    resource: 'hosting',
+    metric: 'reported_usage',
+    quantity: 12.5,
+    unit: 'provider_units',
+    period: { from: '2026-10-01', to: '2026-11-01' },
+    origin: 'manual_reconciliation',
+  };
+
+  assert.equal(isPlatformUsageRecordV1(record), true);
+  assert.equal(Object.hasOwn(record, 'cost'), false);
+  assert.equal(Object.hasOwn(JSON.parse(JSON.stringify(record)), 'cost'), false);
+  assert.equal(isPlatformUsageRecordV1({
+    ...record, cost: { amountMinor: 0, currency: 'BRL' },
+  }), true);
+});
+
+test('platform usage v1 rejects impossible periods and malformed costs', () => {
+  const record = {
+    version: 'v1',
+    resource: 'execution',
+    metric: 'duration_seconds',
+    quantity: 3.5,
+    unit: 'seconds',
+    period: { from: '2026-10-01', to: '2026-10-02' },
+    origin: 'application_observation',
+  };
+
+  assert.equal(isPlatformUsageRecordV1({
+    ...record, period: { from: '2026-02-30', to: '2026-03-02' },
+  }), false);
+  assert.equal(isPlatformUsageRecordV1({
+    ...record, period: { from: '2026-10-02', to: '2026-10-02' },
+  }), false);
+  assert.equal(isPlatformUsageRecordV1({ ...record, cost: null }), false);
+  assert.equal(isPlatformUsageRecordV1({
+    ...record, cost: { amountMinor: -1, currency: 'BRL' },
+  }), false);
+  assert.equal(isPlatformUsageRecordV1({
+    ...record, cost: { amountMinor: 10, currency: 'brl' },
+  }), false);
+});
+
+test('platform usage v1 requires whole-number values for count metrics', () => {
+  const record = {
+    version: 'v1',
+    resource: 'queue',
+    metric: 'job_count',
+    quantity: 1,
+    unit: 'jobs',
+    period: { from: '2026-10-01', to: '2026-10-02' },
+    origin: 'application_observation',
+  };
+
+  for (const metric of ['job_count', 'attempt_count']) {
+    assert.equal(isPlatformUsageRecordV1({ ...record, metric, quantity: 1 }), true);
+    assert.equal(isPlatformUsageRecordV1({ ...record, metric, quantity: 0.5 }), false);
+  }
+});
+
+test('platform usage v1 rejects trailing line terminators in normalized fields', () => {
+  const record = {
+    version: 'v1',
+    resource: 'hosting',
+    metric: 'reported_usage',
+    quantity: 1,
+    unit: 'provider_units',
+    period: { from: '2026-10-01', to: '2026-10-02' },
+    origin: 'manual_reconciliation',
+  };
+
+  assert.equal(isPlatformUsageRecordV1({ ...record, metric: 'reported_usage\n' }), false);
+  assert.equal(isPlatformUsageRecordV1({
+    ...record, cost: { amountMinor: 1, currency: 'BRL\r\n' },
+  }), false);
+  assert.equal(isPlatformUsageRecordV1({
+    ...record, period: { from: record.period.from, to: '2026-10-02\n' },
+  }), false);
+});
+
+test('platform usage v1 has no adapter or Budget implementation dependencies', () => {
+  const source = readFileSync(new URL('../src/contracts/platform-usage/v1.ts', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /^\s*import\b/m);
 });

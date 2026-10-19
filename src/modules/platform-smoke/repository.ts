@@ -19,6 +19,6 @@ export interface SmokeRepository {
   find(id: string): Promise<SmokeTask | null>;
   markProcessing(id: string, attempt: number): Promise<boolean>;
   complete(id: string, attempt: number): Promise<boolean>;
-  markAttemptFailed(id: string, attempt: number): Promise<void>;
+  markAttemptFailed(id: string, attempt: number): Promise<boolean>;
   retry(id: string): Promise<SmokeRetryResult>;
 }

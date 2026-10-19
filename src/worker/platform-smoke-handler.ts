@@ -48,12 +48,11 @@ export async function handlePlatformSmokeJob(
     state: 'processing', occurredAt: occurredAt(),
   });
 
-  const failAttempt = async (state: 'processing' | 'unknown'): Promise<never> => {
-    let eventState = state;
+  const failAttempt = async (): Promise<never> => {
+    let eventState: 'processing' | 'unknown' = 'unknown';
     try {
-      await dependencies.smoke.failAttempt(correlationId, attemptNumber);
+      if (await dependencies.smoke.failAttempt(correlationId, attemptNumber)) eventState = 'processing';
     } catch {
-      eventState = 'unknown';
       emitInfrastructureError();
     }
     dependencies.emit({
@@ -64,7 +63,7 @@ export async function handlePlatformSmokeJob(
   };
 
   if (Number.isSafeInteger(job.failUntilAttempt) && attemptNumber < job.failUntilAttempt) {
-    return failAttempt('processing');
+    return failAttempt();
   }
 
   let committed: boolean;
@@ -72,7 +71,7 @@ export async function handlePlatformSmokeJob(
     committed = await dependencies.smoke.complete(correlationId, attemptNumber);
   } catch {
     emitInfrastructureError();
-    return failAttempt('unknown');
+    return failAttempt();
   }
   if (!committed) return;
 

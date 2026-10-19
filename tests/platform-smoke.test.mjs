@@ -37,7 +37,8 @@ class DurableFake {
   }
   async markProcessing(id, attempt) {
     const row = this.rows.get(id);
-    if (!row || !['queued', 'processing'].includes(row.state) || row.attemptNumber > attempt) return false;
+    if (!row || !((row.state === 'queued' && row.attemptNumber <= attempt)
+      || (row.state === 'processing' && row.attemptNumber < attempt))) return false;
     Object.assign(row, { state: 'processing', attemptNumber: attempt, errorCode: null });
     return true;
   }
@@ -50,7 +51,9 @@ class DurableFake {
   }
   async markAttemptFailed(id, attempt) {
     const row = this.rows.get(id);
-    if (row?.state === 'processing' && row.attemptNumber === attempt) row.errorCode = 'attempt_failed';
+    if (row?.state !== 'processing' || row.attemptNumber !== attempt) return false;
+    row.errorCode = 'attempt_failed';
+    return true;
   }
   async retry(id) {
     const row = this.rows.get(id);
@@ -116,8 +119,18 @@ test('a delayed failure from an older attempt cannot replace a newer completion'
   assert.equal(await smoke.start(accepted.id, 0), true);
   assert.equal(await smoke.start(accepted.id, 1), true);
   assert.equal(await smoke.complete(accepted.id, 1), true);
-  await smoke.failAttempt(accepted.id, 0);
+  assert.equal(await smoke.failAttempt(accepted.id, 0), false);
   assert.equal((await smoke.lookup(accepted.id)).state, 'completed');
+});
+
+test('a duplicate delivery cannot reclaim an already processing attempt', async () => {
+  const repository = new DurableFake();
+  const smoke = new PlatformSmoke(repository);
+  const accepted = await smoke.accept();
+
+  assert.equal(await smoke.start(accepted.id, 0), true);
+  assert.equal(await smoke.start(accepted.id, 0), false);
+  assert.equal(await smoke.start(accepted.id, 1), true);
 });
 
 test('a failure before the effect leaves the task retryable without an effect', async () => {
@@ -217,7 +230,7 @@ test('worker emits correlated start, retry failure, and completion events', asyn
   const smoke = {
     start: async () => true,
     complete: async () => true,
-    failAttempt: async () => {},
+    failAttempt: async () => true,
   };
   const dependencies = {
     smoke,
@@ -323,4 +336,26 @@ test('infrastructure events and console serialization exclude payloads, credenti
   assert.ok(emitted.every((event) => Object.keys(event).every((key) => [
     'type', 'correlationId', 'attemptNumber', 'state', 'occurredAt', 'errorCode',
   ].includes(key))));
+});
+
+test('a failed attempt is reported with unknown state when its durable state update affects no row', async () => {
+  const events = [];
+  await assert.rejects(handlePlatformSmokeJob({
+    correlationId: taskId,
+    attemptNumber: 0,
+    failUntilAttempt: 1,
+  }, {
+    smoke: {
+      start: async () => true,
+      complete: async () => false,
+      failAttempt: async () => false,
+    },
+    emit: (event) => events.push(event),
+    now: () => '2026-10-19T12:00:00.000Z',
+  }), { message: 'processing_failed' });
+
+  assert.deepEqual(events.map(({ type, state }) => [type, state]), [
+    ['smoke_started', 'processing'],
+    ['smoke_attempt_failed', 'unknown'],
+  ]);
 });

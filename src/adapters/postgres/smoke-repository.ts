@@ -63,8 +63,14 @@ function transactionDb(client: PoolClient): NonNullable<ConnectionOptions['db']>
 }
 
 function toTask(row: Record<string, unknown>): SmokeTask {
+  const storedAttempt = row.attempt_number === null || row.attempt_number === undefined
+    ? null
+    : Number(row.attempt_number);
   return {
     id: String(row.id), state: row.state as SmokeTask['state'],
+    attemptNumber: storedAttempt !== null && Number.isSafeInteger(storedAttempt) && storedAttempt >= 0
+      ? storedAttempt
+      : null,
     createdAt: (row.created_at as Date).toISOString(),
     updatedAt: (row.updated_at as Date).toISOString(),
     errorCode: row.error_code === null ? null : String(row.error_code),
@@ -120,7 +126,10 @@ export class PostgresSmokeRepository implements SmokeRepository {
     const result = await getPool().query(
       `UPDATE platform_smoke_tasks
        SET state = 'processing', attempt_number = $2, error_code = NULL, updated_at = now()
-       WHERE id = $1 AND state IN ('queued', 'processing') AND attempt_number <= $2
+       WHERE id = $1 AND (
+         (state = 'queued' AND attempt_number <= $2)
+         OR (state = 'processing' AND attempt_number < $2)
+       )
        RETURNING id`,
       [id, attempt],
     );
@@ -156,12 +165,13 @@ export class PostgresSmokeRepository implements SmokeRepository {
     } finally { client.release(); }
   }
 
-  async markAttemptFailed(id: string, attempt: number): Promise<void> {
-    await getPool().query(
+  async markAttemptFailed(id: string, attempt: number): Promise<boolean> {
+    const result = await getPool().query(
       `UPDATE platform_smoke_tasks SET error_code = 'attempt_failed', updated_at = now()
-       WHERE id = $1 AND attempt_number = $2 AND state = 'processing'`,
+       WHERE id = $1 AND attempt_number = $2 AND state = 'processing' RETURNING id`,
       [id, attempt],
     );
+    return result.rowCount === 1;
   }
 
   async retry(id: string): Promise<SmokeRetryResult> {

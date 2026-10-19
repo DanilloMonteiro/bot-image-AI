@@ -18,6 +18,10 @@ This preflight cannot prove that a live provider has distinct staging and produc
 
 The task and job enter PostgreSQL in one transaction. The destination effect uses the task UUID as its unique idempotency key, and the effect row and `completed` state commit in the same transaction. Worker state transitions are fenced by pg-boss's retry count, so a delayed older attempt cannot replace a newer result. Automatic retries are limited to two retries; each manual recovery reopens the same failed pg-boss job and grants one additional attempt without changing the key or deleting the effect. Queue jobs use `deleteAfterSeconds: 0` so pg-boss retains the row for terminal status reconciliation and manual recovery. The guarantee covers this synthetic PostgreSQL destination only; it does not claim exactly-once queue delivery or cover effects outside PostgreSQL. Backups and external recovery procedures belong to later platform stories.
 
+## Safe operational events
+
+The worker emits `platform_event` records for `smoke_started`, `smoke_attempt_failed`, `smoke_completed`, and task-scoped `infrastructure_error` events. Each record contains only the event type, task UUID (`correlationId`), zero-based `attemptNumber`, known state (or `unknown` when persistence could not confirm it), and an ISO `occurredAt` timestamp. Failure events use the stable codes `attempt_failed` and `infrastructure_error`; queue-level pg-boss failures retain the static `queue_error` marker. Before its first attempt, a task reports `attemptNumber: null` in its durable status. Never add job payloads, exception text or stacks, credentials, personal data, or media bytes to these events or logs.
+
 ## Cost and deployment gate
 
 Local Compose and CI need no external account. Do not provision external infrastructure until the owners approve provider, region, realistic total cost, an effective spending limit within the R$500 pilot ceiling, and privacy terms. The CI workflow builds and runs the staging equivalent in GitHub Actions; it does not claim an external staging deployment.

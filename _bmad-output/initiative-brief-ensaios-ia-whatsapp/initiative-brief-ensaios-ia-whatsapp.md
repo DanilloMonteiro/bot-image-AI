@@ -1,8 +1,11 @@
 ---
+tracker_id: ""
+key: ""
 type: initiative
-title: Ensaios IA por WhatsApp
+title: "Ensaios IA por WhatsApp"
 parent: none
-covers: [CAP-1, CAP-2, CAP-3, CAP-4, CAP-5, CAP-6, CAP-7]
+covers: ["CAP-1", "CAP-2", "CAP-3", "CAP-4", "CAP-5", "CAP-6", "CAP-7"]
+after: []
 assignee: ""
 risk: high
 ---
@@ -11,47 +14,69 @@ risk: high
 
 ## Description
 
-Validar, em piloto controlado de retratos individuais de aniversário para adultos, se a jornada iniciada por mensagem recebida no WhatsApp atende clientes, preserva fotos e pode ser operada pelos dois sócios dentro do teto total de R$500. As capacidades, limites e sinais de sucesso estão na spec da iniciativa.
+Entregar um MVP que permite a um adulto contratar pelo WhatsApp um retrato individual gerado por IA, com conversa natural, consentimento explícito, pagamento Pix, prévia revisável, entrega e atendimento dos sócios. A primeira demonstração percorre compra até entrega em sandbox, usando dados e imagem sintéticos, sem cobrança ou fotos reais. As ações com clientes, dinheiro e provedores reais continuam bloqueadas até que as decisões de fornecedor, privacidade, retenção e operação estejam aprovadas.
 
 ## Outcome
 
-Os sócios decidem se continuam o piloto com base nos sinais de procura e conversão, qualidade percebida, margem e esforço operacional definidos na spec, sem exceder R$500 nem processar fotos sem política informada e consentimento afirmativo.
+Uma pessoa adulta consegue concluir, em sandbox, o fluxo iniciado por uma mensagem recebida no WhatsApp até a confirmação de entrega do retrato, enquanto os sócios conseguem acompanhar custos, segurança e qualidade para decidir se o piloto pode continuar.
 
-## Done when
+## Requirements
 
-1. As sete capacidades da spec estão disponíveis em produção para o escopo do MVP; anúncio e transição do Instagram ficam fora do sistema.
-2. Conversas de teste percorrem oferta e FAQ, elegibilidade, consentimento, Pix, geração e entrega; eventos repetidos não duplicam cobrança ou geração paga.
-3. Nenhuma foto ou resultado é coletado/processado antes da política aplicável estar aprovada e informada e do consentimento afirmativo estar registrado; pedidos de acesso/exclusão chegam à operação.
-4. Pedidos explícitos de atendimento humano são encaminhados, a automação comercial fica suspensa durante o atendimento e a primeira resposta humana ocorre em até 24 horas.
-5. Gastos realizados, comprometidos, reservados e ainda não faturados contam contra o teto de R$500; operação com custo é bloqueada se o saldo for desconhecido ou insuficiente.
-6. Os sócios avaliam as medidas e limiares de continuidade; preço, prazo, qualidade e regras comerciais são aprovados antes dos anúncios e da operação correspondente.
+- CAP-1 — conversa natural, apresentação e contratação do retrato pelo WhatsApp.
+- CAP-2 — consentimento e tratamento responsável de identidade, mensagens e imagens.
+- CAP-3 — catálogo, pedido, cobrança Pix e reconciliação.
+- CAP-4 — geração, revisão, entrega e recuperação do retrato.
+- CAP-5 — operação dos sócios para prévia e decisões de qualidade.
+- CAP-6 — atendimento humano, escalonamento e solicitação de direitos sobre dados.
+- CAP-7 — limite de custos, observabilidade e decisão de continuidade do piloto.
 
 ## Boundaries
 
-Sistema modular único, em TypeScript e criado do zero, com Next.js e worker separado no mesmo código-base. Inclui painel dos sócios e jornada a partir da primeira mensagem recebida no WhatsApp, pagamento Pix, processamento privado de fotos, geração, entrega e controle do piloto. Anúncios, clique e transição do Instagram ficam fora da experiência do sistema. Consulte os não-objetivos da spec.
+- MVP limitado a um retrato individual para adulto, iniciado por mensagem recebida no WhatsApp.
+- Primeiro demo usa sandbox, pagamentos e eventos sintéticos e imagens de teste; não usa dinheiro nem fotos reais.
+- Arquitetura modular monolítica: aplicação Next.js e worker Node.js separados; módulos conversam por casos de uso públicos e não escrevem diretamente nas tabelas de outros módulos.
+- Conversas é dona da identidade interna, vínculo WhatsApp, conversa e evidência de consentimento; Pedidos/Pagamentos é dono de catálogo, pedido e cobrança; Retratos é dono de elegibilidade por imagem, geração, qualidade e entrega; Operações é dono da interface dos sócios, atribuição e tomada de controle; Orçamento é dono do livro razão, reservas e relatório autoritativo.
+- CAP-1 é dividido: Conversas implementa diálogo/FAQ e Pedidos/Pagamentos implementa catálogo e aceitação de pedido.
+- CAP-2 é dividido: Conversas revela a política e coleta consentimento; Retratos revalida consentimento e elegibilidade para a imagem, finalidade e destino exatos antes de chamar provedor; Operações coordena direitos sobre dados e só conclui pedidos com evidências dos módulos e fornecedores.
+- CAP-5 é dividido: Operações é dona da decisão e interface de aprovação; Retratos mantém estado da prévia e geração; Orçamento fornece reserva atômica.
+- CAP-7 é dividido: Base/Orçamento fornece contabilização, bloqueio e relatório autoritativos; Operações apresenta uma visão somente leitura e registra a avaliação; esta iniciativa registra a decisão final de continuar ou parar.
+- Nenhum fornecedor, política de retenção/exclusão, infraestrutura, região, preços, limites por categoria, política de estorno ou limiar final de qualidade está aprovado ainda.
 
-Touch point: infraestrutura, banco, fila durável, CI/CD e observabilidade — owner: epic-platform-foundation.
-Touch point: canal WhatsApp, conversa e consentimento — owner: epic-whatsapp-conversation-consent.
-Touch point: pedidos e integração Pix — owner: epic-orders-pix.
-Touch point: painel, permissões, auditoria e suporte humano — owner: epic-partner-operations.
-Touch point: fornecedor de IA, armazenamento privado, ciclo de vida e entrega de fotos — owner: epic-portrait-fulfillment.
-Touch point: ledger e reservas contra o teto do piloto — owner: epic-pilot-budget-data-policy.
-Touch point: aprovação e fluxo de prévia — owner: epic-preview-approval.
+## Ownership by epic
+
+- `epic-platform-foundation`: infraestrutura, banco, fila durável, CI/CD e observabilidade.
+- `epic-pilot-budget-data-policy`: ledger, reservas e políticas de dados do piloto.
+- `epic-whatsapp-conversation-consent`: canal WhatsApp, conversa e consentimento.
+- `epic-orders-pix`: pedidos e integração Pix.
+- `epic-partner-operations`: painel, permissões, auditoria e suporte humano.
+- `epic-portrait-fulfillment`: fornecedor de IA, armazenamento privado, ciclo de vida e entrega de fotos.
+- `epic-preview-approval`: aprovação e fluxo de prévia.
 
 Tracer path: mensagem recebida → FAQ e consentimento → foto de teste → Pix de sandbox → retrato de teste → confirmação de entrega ou exceção visível à operação; a prévia opcional cruza painel, reserva de custo e processamento de imagem.
 
+## DoneWhen
+
+- [ ] A demonstração em sandbox percorre mensagem recebida, divulgação de política, consentimento, pedido, Pix sintético, imagem sintética, revisão e recibo explícito de entrega.
+- [ ] Os módulos e suas fronteiras seguem a arquitetura aprovada; eventos duráveis, idempotência, reconciliação e recuperação não deixam cobranças ou entregas duplicadas.
+- [ ] O orçamento contabiliza custos reais e comprometidos, bloqueia novas ações antes de ultrapassar R$ 500 e também respeita limites por categoria aprovados pelos sócios.
+- [ ] Mensagem ou mídia antecipada, recusa, consentimento ambíguo, cobrança divergente e falha de geração não iniciam ações irreversíveis; 100% dos pedidos explícitos de atendimento humano chegam a uma pessoa com contexto.
+- [ ] Operações consegue revisar uma prévia, assumir e retomar conversas explicitamente, acompanhar pendências e medir primeira resposta humana em até 24 horas; após entrega o fluxo pergunta se a pessoa recebeu os arquivos, convida feedback conforme opt-out/regras do canal e encaminha feedback negativo sem prometer alteração/reembolso.
+- [ ] Os sócios registram a avaliação CAP-7 e uma decisão explícita de continuar ou parar; quaisquer liberações de dinheiro, fotos reais ou provedores reais dependem das aprovações externas listadas nos épicos.
+
 ## References
 
-- spec — _bmad-output/initiative-brief-ensaios-ia-whatsapp/spec-ensaios-ia-whatsapp/spec-ensaios-ia-whatsapp.md, Capabilities, Constraints, Non-goals, Success signal e Open Questions
-- architecture — _bmad-output/initiative-brief-ensaios-ia-whatsapp/architecture-ensaios-ia-whatsapp/architecture-ensaios-ia-whatsapp.md, decisões AD-1 a AD-9 e contratos entre módulos
-- PRD — prd-ensaios-ia-whatsapp.md, requisitos e métricas do produto
-- UX — _bmad-output/initiative-brief-ensaios-ia-whatsapp/ux-ensaios-ia-whatsapp/DESIGN.md e EXPERIENCE.md
+- `spec-ensaios-ia-whatsapp/spec-ensaios-ia-whatsapp.md`
+- `prd-ensaios-ia-whatsapp/prd-ensaios-ia-whatsapp.md` e `prd-ensaios-ia-whatsapp/addendum.md`
+- `architecture-ensaios-ia-whatsapp/architecture-ensaios-ia-whatsapp.md`
+- `ux-ensaios-ia-whatsapp/EXPERIENCE.md` e `ux-ensaios-ia-whatsapp/DESIGN.md`
 
 ## Notes
 
-- Decision: divisão de sete épicos aprovada pelo usuário em 2026-10-14; limites por capacidade e dependências explícitas, com plataforma primeiro.
-- Decision: como a equipe não definiu regra própria de divisão, usar capacidade (ou par fortemente acoplado) entregue em produção por um owner.
-- Open question: hospedagem, banco/fila e fornecedores de IA/pagamento — fechar após validar custo, privacidade e operação.
-- Open question: retenção, exclusão, cópias/backups e exceções por tipo de dado — fechar e informar antes de coletar fotos.
-- Open question: preços/margem, prazo, critérios de qualidade e tentativas, política de revisão/reembolso, regras de prévia e limites de continuidade — fechar antes de anunciar ou ativar as partes correspondentes.
-- Source conflict: brief e plano fonte contêm temas, provedores, stack, prazos de retenção e valores operacionais propostos que não são decisões; a spec vigente limita o MVP a aniversário e a arquitetura deixa hospedagem, persistência, fila e provedores para validação.
+- Decisão do usuário (2026-10-15): MVP completo, cobrindo CAP-1 a CAP-7; decisões ainda abertas devem permanecer registradas como incertezas.
+- Decisão do usuário (2026-10-15): dividir épicos por capacidade/domínio, com limites claros entre os dois desenvolvedores.
+- Decisão do usuário (2026-10-15): primeira demonstração de compra até entrega em sandbox, sem dinheiro ou fotos reais.
+- Decisão do usuário (2026-10-15): a árvore inicial de quatro épicos foi substituída pela divisão vigente em sete épicos por capacidade; a divisão vigente está registrada em `tickets.toml`.
+- Decisão do usuário (2026-10-14): limites e dependências explícitos entre os sete épicos, com plataforma primeiro.
+- Há conflito de fonte: o plano antigo descreve temas amplos e entrada por Instagram; a especificação atual define adulto, retrato individual e início pela primeira mensagem recebida no WhatsApp. O PRD UJ-1 ainda descreve anúncio/clique antes da mensagem, mas a reconciliação de UX deixa aquisição, clique e transição pelo Instagram fora da experiência do sistema; apenas metadados de campanha efetivamente fornecidos pelo canal podem ser usados. Nenhum épico implementa anúncios ou clique.
+- A proposta Fastify/Drizzle do plano antigo foi substituída pela arquitetura final Next.js + worker Node.js. PostgreSQL, fila, provedor WhatsApp/Pix/IA, armazenamento, hospedagem e região continuam candidatos, sem decisão aprovada.
+- Perguntas abertas: fornecedores e disponibilidade de sandbox; região e termos de hospedagem; banco, fila e migrações; retenção, exclusão, cópias de fornecedores e backups; limites por categoria e regra de liberação de reserva; preço, reembolso, tentativas e qualidade; contas, MFA e permissões dos sócios; alertas, acessibilidade e métricas/limiares de decisão.

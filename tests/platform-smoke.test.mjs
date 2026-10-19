@@ -7,6 +7,8 @@ const { PlatformSmoke } = require('../dist/modules/platform-smoke/use-cases.js')
 const { isAuthorized } = require('../dist/adapters/http/staging-auth.js');
 const { mapSmokeRetryResult } = require('../dist/adapters/http/smoke-retry-response.js');
 const { handleSmokeRetryRequest } = require('../dist/adapters/http/smoke-retry-handler.js');
+const { emitPlatformEvent } = require('../dist/adapters/console/platform-events.js');
+const { handlePlatformSmokeJob } = require('../dist/worker/platform-smoke-handler.js');
 
 const taskId = 'e5ea330c-48e5-44c2-b383-7382890524be';
 
@@ -24,14 +26,14 @@ class DurableFake {
     task.attemptNumber = -1;
     this.rows.set(task.id, task);
     this.jobs.set(task.id, { state: 'created', retryCount: 0 });
-    const { attemptNumber: _attemptNumber, ...publicTask } = task;
-    return publicTask;
+    const { attemptNumber, ...publicTask } = task;
+    return { ...publicTask, attemptNumber: attemptNumber >= 0 ? attemptNumber : null };
   }
   async find(id) {
     const row = this.rows.get(id);
     if (!row) return null;
-    const { attemptNumber: _attemptNumber, ...task } = row;
-    return { ...task };
+    const { attemptNumber, ...task } = row;
+    return { ...task, attemptNumber: attemptNumber >= 0 ? attemptNumber : null };
   }
   async markProcessing(id, attempt) {
     const row = this.rows.get(id);
@@ -68,6 +70,7 @@ test('a redelivery after the effect commit keeps the original key and one effect
   const web = new PlatformSmoke(repository);
   const accepted = await web.accept();
   assert.equal(accepted.state, 'queued');
+  assert.equal(accepted.attemptNumber, null);
 
   const firstAttempt = new PlatformSmoke(repository);
   assert.equal(await firstAttempt.start(accepted.id, 0), true);
@@ -76,7 +79,7 @@ test('a redelivery after the effect commit keeps the original key and one effect
   const restartedWorker = new PlatformSmoke(repository);
   assert.equal(await restartedWorker.start(accepted.id, 1), false);
   assert.equal(repository.effects.size, 1);
-  assert.deepEqual(await web.lookup(accepted.id), { ...accepted, state: 'completed' });
+  assert.deepEqual(await web.lookup(accepted.id), { ...accepted, state: 'completed', attemptNumber: 0 });
 });
 
 test('terminal recovery reuses the task and idempotency key for one extra attempt', async () => {
@@ -89,11 +92,14 @@ test('terminal recovery reuses the task and idempotency key for one extra attemp
   const task = repository.rows.get(accepted.id);
   Object.assign(task, { state: 'failed', errorCode: 'retries_exhausted' });
   repository.jobs.set(accepted.id, { state: 'failed', retryCount: 2 });
-  assert.deepEqual(await smoke.lookup(accepted.id), { ...accepted, state: 'failed', errorCode: 'retries_exhausted' });
+  assert.deepEqual(await smoke.lookup(accepted.id), {
+    ...accepted, state: 'failed', attemptNumber: 0, errorCode: 'retries_exhausted',
+  });
   const recovered = await smoke.retry(accepted.id);
   assert.equal(recovered.status, 'retried');
   assert.equal(recovered.task.id, accepted.id);
   assert.equal(recovered.task.state, 'queued');
+  assert.equal(recovered.task.attemptNumber, 3);
   assert.equal(repository.rows.get(accepted.id).attemptNumber, 3);
 
   assert.equal(await smoke.start(accepted.id, 3), true);
@@ -204,4 +210,117 @@ test('missing or wrong secret denies access before state is read', () => {
     if (previous === undefined) delete process.env.STAGING_SMOKE_SECRET;
     else process.env.STAGING_SMOKE_SECRET = previous;
   }
+});
+
+test('worker emits correlated start, retry failure, and completion events', async () => {
+  const events = [];
+  const smoke = {
+    start: async () => true,
+    complete: async () => true,
+    failAttempt: async () => {},
+  };
+  const dependencies = {
+    smoke,
+    emit: (event) => events.push(event),
+    now: () => '2026-10-19T12:00:00.000Z',
+  };
+
+  await assert.rejects(
+    handlePlatformSmokeJob({ correlationId: taskId, attemptNumber: 0, failUntilAttempt: 1 }, dependencies),
+    { message: 'processing_failed' },
+  );
+  await handlePlatformSmokeJob({ correlationId: taskId, attemptNumber: 1, failUntilAttempt: 1 }, dependencies);
+
+  assert.deepEqual(events.map(({ type, correlationId, attemptNumber, state, errorCode }) => ({
+    type, correlationId, attemptNumber, state, ...(errorCode ? { errorCode } : {}),
+  })), [
+    { type: 'smoke_started', correlationId: taskId, attemptNumber: 0, state: 'processing' },
+    { type: 'smoke_attempt_failed', correlationId: taskId, attemptNumber: 0, state: 'processing', errorCode: 'attempt_failed' },
+    { type: 'smoke_started', correlationId: taskId, attemptNumber: 1, state: 'processing' },
+    { type: 'smoke_completed', correlationId: taskId, attemptNumber: 1, state: 'completed' },
+  ]);
+  assert.ok(events.every((event) => event.occurredAt === '2026-10-19T12:00:00.000Z'));
+});
+
+test('terminal failure keeps the final attempt visible with a stable error code', async () => {
+  const repository = new DurableFake();
+  const smoke = new PlatformSmoke(repository);
+  const accepted = await smoke.accept();
+  const events = [];
+
+  for (const attemptNumber of [0, 1, 2]) {
+    await assert.rejects(handlePlatformSmokeJob({
+      correlationId: accepted.id, attemptNumber, failUntilAttempt: 3,
+    }, {
+      smoke,
+      emit: (event) => events.push(event),
+      now: () => '2026-10-19T12:00:00.000Z',
+    }), { message: 'processing_failed' });
+  }
+  Object.assign(repository.rows.get(accepted.id), { state: 'failed', errorCode: 'retries_exhausted' });
+
+  const terminal = await smoke.lookup(accepted.id);
+  assert.equal(terminal.state, 'failed');
+  assert.equal(terminal.attemptNumber, 2);
+  assert.equal(terminal.errorCode, 'retries_exhausted');
+  assert.deepEqual(events.filter((event) => event.type === 'smoke_attempt_failed')
+    .map((event) => [event.correlationId, event.attemptNumber, event.errorCode]), [
+    [accepted.id, 0, 'attempt_failed'],
+    [accepted.id, 1, 'attempt_failed'],
+    [accepted.id, 2, 'attempt_failed'],
+  ]);
+});
+
+test('infrastructure events and console serialization exclude payloads, credentials, and exception text', async () => {
+  const sensitive = 'private payload credential exception stack sentinel';
+  const records = [];
+  const originalInfo = console.info;
+  console.info = (...args) => records.push(args);
+  try {
+    const smoke = {
+      start: async () => true,
+      complete: async () => { throw new Error(sensitive); },
+      failAttempt: async () => { throw new Error(`failed to persist ${sensitive}`); },
+    };
+    await assert.rejects(handlePlatformSmokeJob({
+      correlationId: taskId,
+      attemptNumber: 0,
+      failUntilAttempt: 0,
+      payload: sensitive,
+      credentials: sensitive,
+    }, { smoke, emit: emitPlatformEvent, now: () => '2026-10-19T12:00:00.000Z' }), {
+      message: 'processing_failed',
+    });
+
+    emitPlatformEvent({
+      type: 'smoke_attempt_failed',
+      correlationId: taskId,
+      attemptNumber: 4,
+      state: 'processing',
+      errorCode: sensitive,
+      occurredAt: '2026-10-19T12:00:00.000Z',
+      payload: sensitive,
+      accessToken: sensitive,
+    });
+  } finally {
+    console.info = originalInfo;
+  }
+
+  const serialized = JSON.stringify(records);
+  assert.equal(serialized.includes(sensitive), false);
+  const emitted = records.map(([, event]) => event);
+  assert.deepEqual(emitted.map((event) => event.type), [
+    'smoke_started', 'infrastructure_error', 'infrastructure_error', 'smoke_attempt_failed', 'smoke_attempt_failed',
+  ]);
+  assert.deepEqual(emitted.at(-1), {
+    type: 'smoke_attempt_failed',
+    correlationId: taskId,
+    attemptNumber: 4,
+    state: 'processing',
+    occurredAt: '2026-10-19T12:00:00.000Z',
+    errorCode: 'attempt_failed',
+  });
+  assert.ok(emitted.every((event) => Object.keys(event).every((key) => [
+    'type', 'correlationId', 'attemptNumber', 'state', 'occurredAt', 'errorCode',
+  ].includes(key))));
 });

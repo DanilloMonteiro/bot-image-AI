@@ -63,8 +63,14 @@ function transactionDb(client: PoolClient): NonNullable<ConnectionOptions['db']>
 }
 
 function toTask(row: Record<string, unknown>): SmokeTask {
+  const storedAttempt = row.attempt_number === null || row.attempt_number === undefined
+    ? null
+    : Number(row.attempt_number);
   return {
     id: String(row.id), state: row.state as SmokeTask['state'],
+    attemptNumber: storedAttempt !== null && Number.isSafeInteger(storedAttempt) && storedAttempt >= 0
+      ? storedAttempt
+      : null,
     createdAt: (row.created_at as Date).toISOString(),
     updatedAt: (row.updated_at as Date).toISOString(),
     errorCode: row.error_code === null ? null : String(row.error_code),

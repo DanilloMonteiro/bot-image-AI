@@ -3,6 +3,7 @@ export type SmokeState = 'queued' | 'processing' | 'completed' | 'failed';
 export type SmokeTask = {
   id: string;
   state: SmokeState;
+  attemptNumber: number | null;
   createdAt: string;
   updatedAt: string;
   errorCode: string | null;

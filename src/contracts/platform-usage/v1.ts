@@ -36,9 +36,9 @@ export type PlatformUsageRecordV1 = {
 
 const RESOURCE_SET = new Set<string>(PLATFORM_USAGE_RESOURCES);
 const ORIGIN_SET = new Set<string>(PLATFORM_USAGE_ORIGINS);
-const IDENTIFIER_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
-const CURRENCY_PATTERN = /^[A-Z]{3}$/;
-const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+const IDENTIFIER_PATTERN = /^[a-z][a-z0-9_]{0,63}(?![\s\S])/;
+const CURRENCY_PATTERN = /^[A-Z]{3}(?![\s\S])/;
+const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})(?![\s\S])/;
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

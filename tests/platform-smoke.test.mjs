@@ -424,6 +424,26 @@ test('platform usage v1 requires whole-number values for count metrics', () => {
   }
 });
 
+test('platform usage v1 rejects trailing line terminators in normalized fields', () => {
+  const record = {
+    version: 'v1',
+    resource: 'hosting',
+    metric: 'reported_usage',
+    quantity: 1,
+    unit: 'provider_units',
+    period: { from: '2026-10-01', to: '2026-10-02' },
+    origin: 'manual_reconciliation',
+  };
+
+  assert.equal(isPlatformUsageRecordV1({ ...record, metric: 'reported_usage\n' }), false);
+  assert.equal(isPlatformUsageRecordV1({
+    ...record, cost: { amountMinor: 1, currency: 'BRL\r\n' },
+  }), false);
+  assert.equal(isPlatformUsageRecordV1({
+    ...record, period: { from: record.period.from, to: '2026-10-02\n' },
+  }), false);
+});
+
 test('platform usage v1 has no adapter or Budget implementation dependencies', () => {
   const source = readFileSync(new URL('../src/contracts/platform-usage/v1.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(source, /^\s*import\b/m);

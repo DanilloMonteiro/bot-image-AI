@@ -77,6 +77,7 @@ export function isPlatformUsageRecordV1(value: unknown): value is PlatformUsageR
     || typeof value.quantity !== 'number'
     || !Number.isFinite(value.quantity)
     || value.quantity < 0
+    || (value.metric.endsWith('_count') && !Number.isSafeInteger(value.quantity))
     || typeof value.origin !== 'string'
     || !ORIGIN_SET.has(value.origin)
     || !isObject(value.period)

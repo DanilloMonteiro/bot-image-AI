@@ -407,6 +407,23 @@ test('platform usage v1 rejects impossible periods and malformed costs', () => {
   }), false);
 });
 
+test('platform usage v1 requires whole-number values for count metrics', () => {
+  const record = {
+    version: 'v1',
+    resource: 'queue',
+    metric: 'job_count',
+    quantity: 1,
+    unit: 'jobs',
+    period: { from: '2026-10-01', to: '2026-10-02' },
+    origin: 'application_observation',
+  };
+
+  for (const metric of ['job_count', 'attempt_count']) {
+    assert.equal(isPlatformUsageRecordV1({ ...record, metric, quantity: 1 }), true);
+    assert.equal(isPlatformUsageRecordV1({ ...record, metric, quantity: 0.5 }), false);
+  }
+});
+
 test('platform usage v1 has no adapter or Budget implementation dependencies', () => {
   const source = readFileSync(new URL('../src/contracts/platform-usage/v1.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(source, /^\s*import\b/m);

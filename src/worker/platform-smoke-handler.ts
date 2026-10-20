@@ -1,4 +1,4 @@
-import type { PlatformEvent } from '../adapters/console/platform-events.js';
+import type { PlatformEvent } from '../modules/platform-smoke/events.js';
 import type { PlatformSmoke } from '../modules/platform-smoke/use-cases.js';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

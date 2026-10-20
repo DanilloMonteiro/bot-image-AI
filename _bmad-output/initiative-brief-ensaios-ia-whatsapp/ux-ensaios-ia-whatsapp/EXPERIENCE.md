@@ -5,14 +5,14 @@ sources:
   - ../../../prd-ensaios-ia-whatsapp.md
   - ../spec-ensaios-ia-whatsapp/spec-ensaios-ia-whatsapp.md
   - ../prd-ensaios-ia-whatsapp/addendum.md
-updated: 2026-10-09
+updated: 2026-10-20
 ---
 
 # Foundation
 
 ## Experiência e limite do sistema
 
-O produto permite que uma pessoa adulta encomende um retrato individual de aniversário em uma conversa no WhatsApp. A cliente entende as condições antes de enviar a própria foto, recebe a oferta, paga por Pix e recebe as imagens pelo mesmo canal. Dois sócios usam um painel web interno para exceções, aprovações e operação. DESIGN.md define a identidade visual; este documento define arquitetura, comportamento e estados.
+O produto permite que uma pessoa adulta encomende um retrato individual de aniversário em uma conversa no WhatsApp. A cliente entende as condições antes de enviar a própria foto, recebe a oferta, paga por Pix e recebe as imagens pelo mesmo canal. Isaac e seu sócio usam o painel web interno por contas individuais protegidas por MFA, sem cadastro público ou credenciais compartilhadas; ambos são administradores. DESIGN.md define a identidade visual; este documento define arquitetura, comportamento e estados.
 
 - **Início do sistema:** primeira mensagem recebida no WhatsApp. O anúncio, o clique e a transição pelo Instagram ficam fora desta UX.
 - **Superfícies:** conversa da cliente no WhatsApp e painel web interno dos sócios.
@@ -61,7 +61,7 @@ Este documento define o comportamento; as regras visuais correspondentes estão 
 
 | Componente | Uso | Regra comportamental |
 | --- | --- | --- |
-| `botao-principal` | Ação principal disponível no painel | Uma ação principal por contexto. Desabilitar enquanto uma condição necessária não estiver confirmada e mostrar o motivo. Ações sensíveis exigem confirmação do sócio. |
+| `botao-principal` | Ação principal disponível no painel | Uma ação principal por contexto. Desabilitar enquanto uma condição necessária não estiver confirmada e mostrar o motivo. Confirmar explicitamente ações que gerem gasto/imagem, alterem preço/pagamento, liberem reserva, exponham/excluam dado pessoal ou mudem acesso/takeover; basta o sócio autenticado que executa, sem segunda aprovação. |
 | `titulo-painel` | Página e seções do painel | Identifica a área atual na ordem de leitura; não se apresenta como controle interativo. |
 | `link` | Navegação e referências | Operável por teclado, com foco visível e texto sublinhado; o nome informa o destino ou propósito. |
 | `texto-corpo` | Instruções, contexto e estados | Informação essencial aparece em texto direto, sem depender de cor, imagem ou tooltip. |
@@ -76,7 +76,7 @@ Este documento define o comportamento; as regras visuais correspondentes estão 
 ## Padrões de conversa
 
 - **FAQ pré-Pix:** responder somente com fatos aprovados. Semelhança pode variar e não é garantida; preço e prazo só aparecem após aprovação. Retenção e tratamento da foto precisam estar definidos antes da coleta.
-- **Consentimento:** dúvidas e recusas podem continuar como conversa comercial sem envio de foto. Resposta ambígua não vale como consentimento. Pedido para parar antes da geração interrompe o processamento; aplicar a regra aprovada de descarte sem alegar exclusão não verificada.
+- **Consentimento:** dúvidas e recusas podem continuar como conversa comercial sem envio de foto. Resposta ambígua não vale como consentimento. Pedido para parar persiste a revogação e cancela trabalho ainda não despachado. Se a submissão externa já foi autorizada/começou e pode ter sido recebida, bloquear resultado e entrega, pedir exclusão upstream quando suportada, registrar o estado e escalar; nunca alegar exclusão sem evidência.
 - **Elegibilidade:** perguntar maioridade e titularidade em turnos separados. Se a pessoa não confirmar qualquer condição ou a imagem não for individual/própria, pausar, explicar brevemente e pedir outra imagem ou oferecer sócio.
 - **Resumo e Pix:** apresentar modelo, pacote, quantidade e preço liberado; pedir confirmação antes de criar cobrança. Usar estados pendente, confirmado, divergente ou não verificado com base no registro do provedor.
 - **Prévia:** explicar que depende de aprovação e reserva de custo, é enviada em baixa resolução e contém marca-d’água. Não sugerir que pedir prévia inicia geração ou define o abatimento do pacote.
@@ -91,7 +91,7 @@ Este documento define o comportamento; as regras visuais correspondentes estão 
 | --- | --- |
 | Política/finalidade incompleta | Manter o gate fechado; não solicitar nem encaminhar foto. Explicar que a equipe ainda está preparando essa informação e oferecer outra dúvida ou contato humano. |
 | Consentimento ausente, ambíguo ou recusado | Não processar nem encaminhar a imagem. Responder à dúvida; permitir continuar sem foto ou encerrar sem pressão. |
-| Desistência antes da geração | Parar novas ações de processamento e seguir a política aprovada de descarte; não afirmar que dados foram apagados antes da verificação. |
+| Desistência antes da geração | Cancelar trabalho ainda na fila e conferir consentimento antes da chamada externa. Se o provedor já recebeu a solicitação, suprimir resultado/entrega, pedir exclusão quando suportada e escalar; nunca afirmar exclusão sem evidência. |
 | Pessoa/foto inelegível ou arquivo inválido | Não gerar nem enviar ao provedor de IA. Dizer o que precisa mudar e aceitar nova foto; se houver dúvida, encaminhar ao sócio. |
 | Pix pendente, divergente ou não verificado | Não iniciar geração paga; explicar o estado verdadeiro. Não pedir pagamento repetido enquanto o evento estiver incerto; reconciliar pelo provedor. |
 | Falha na criação do Pix | Informar que a cobrança não foi confirmada e indicar o próximo passo seguro; não duplicar pedido ou cobrança por suposição. |
@@ -109,14 +109,15 @@ Este documento define o comportamento; as regras visuais correspondentes estão 
 | Inbox vazio | Explicar que não há Escalações pendentes, sem inventar trabalho recomendado. |
 | Falha de leitura | Informar que os dados atuais não foram confirmados e oferecer nova tentativa; não permitir decisão sensível baseada em estado desatualizado. |
 | Sem conexão ou dado atual desconhecido | Preservar contexto visível, marcar dados como desatualizados e bloquear ações que dependem de confirmação recente, incluindo gasto novo. |
-| Acesso negado | Não exibir fotos/resultados protegidos; explicar falta de permissão sem revelar o conteúdo. |
+| Acesso negado | Servir objetos protegidos do painel apenas pelo proxy autenticado do servidor, revalidando permissão por objeto em cada requisição; não usar URL pré-assinada no navegador. Explicar falta de permissão sem revelar bytes, metadados, nome ou existência do objeto. |
+| Visualização de imagem | Permitir visualização normal sem confirmação adicional após autenticação e autorização por objeto; registrar ator, horário e objeto. Download, exportação e exclusão exigem confirmação explícita antes da ação. |
 | Atendimento atribuído a outro sócio | Mostrar responsável e impedir resposta manual concorrente; permitir atualizar o estado. |
 | Pedido de privacidade em andamento | Mostrar responsável, itens/cópias que precisam ser verificados e estado de cada verificação; não oferecer fechamento como concluído sem evidência. |
 | Saldo insuficiente ou desconhecido | Bloquear qualquer nova operação que gere custo e explicar a causa; reabrir somente após reconciliação e saldo confirmado. |
 
 ## Teto do piloto
 
-O teto total é R$500. Mostrar gastos realizados, comprometidos, reservados e ainda não faturados. A divisão entre anúncios e provedores, alertas e limites por categoria continuam em aberto; o saldo geral desconhecido ou insuficiente bloqueia nova operação que gere custo.
+O teto do piloto é R$500: anúncios R$220; IA R$110; aplicação, worker, PostgreSQL, Bucket, armazenamento, tráfego de serviço e backups Railway R$65; domínio/acessórios R$25; reserva para tarifas Meta/Pix, câmbio e retentativas R$80. Mostrar gastos realizados, comprometidos, reservados e ainda não faturados. Alertar em 60%, 80% e 95% do total e de cada categoria; não transferir saldo entre categorias automaticamente. Bloquear nova ação paga quando o saldo ou custo for desconhecido/insuficiente ou qualquer teto for alcançado. Qualquer um dos sócios pode pausar gastos. Para liberar reserva, o resultado do provedor deve ser terminal e o uso/cobrança ligado ao ID da ação deve estar conciliado; custos não faturados conhecidos continuam comprometidos, e divergência ou saldo desconhecido mantém o bloqueio. Registrar ator, motivo e horário.
 
 # Interaction Primitives
 
@@ -209,7 +210,7 @@ A direção visual da referência não define o layout responsivo do painel. Con
 
 **Início:** Maria pede uma pessoa, acesso ou exclusão de dados/imagem. **Clímax:** recebe confirmação do recebimento e os sócios verificam o pedido sem alegar conclusão antes da evidência.
 
-1. Claudia reconhece o pedido em linguagem simples e confirma imediatamente que foi encaminhado.
+1. Claudia reconhece o pedido em linguagem simples e confirma o recebimento somente depois de persistir a solicitação; se envolver revogação ou exclusão de trabalho ativo, bloquear novo processamento antes da confirmação e manter o bloqueio durante falhas até a reconciliação. Mostrar quando o encaminhamento ao painel ainda está pendente.
 2. Para ajuda humana ou privacidade, informa que os sócios darão a primeira resposta em até 24 horas, sem indicar prazo de resolução.
 3. O painel registra tipo do pedido, conversa/pedido relacionado, responsável e itens que precisam de verificação.
 4. O sócio verifica foto original, resultados, registros e cópias de fornecedor/backup aplicáveis segundo a política aprovada.
@@ -235,7 +236,7 @@ A matriz liga requisitos às consequências observáveis da experiência. Idempo
 ## Decisões e gates ainda abertos
 
 - **Antes da coleta de foto:** nome do fornecedor, condições de envio/reuso e política por tipo de dado (foto original, resultados, conversa/consentimento, backups e cópias de fornecedores), incluindo prazo, marco inicial, exclusão e exceções. O gate permanece fechado até decisão e validação.
-- Preços finais e margem; prazo após teste de capacidade; critérios de qualidade e número de tentativas; limites e contabilização da prévia; política de ajuste, cancelamento e reembolso.
+- Preços finais e margem; prazo após teste de capacidade; critérios de qualidade e número de tentativas; limites e contabilização da prévia; política de ajuste, cancelamento e reembolso. A IA não cria nem autoriza descontos ou reembolsos; até haver regra aprovada, a decisão cabe ao sócio autorizado e fica registrada.
 - Prioridade/canal das notificações, comportamento de falhas e prazo de resolução humana; regras vigentes da conta WhatsApp, opt-in/opt-out, janela e templates; áudio e cadência de pós-venda.
 - Dispositivo prioritário e breakpoints do painel; fallback tipográfico; validação da meta de acessibilidade assumida; direção de arte das fotografias; nome e marca gráfica comerciais.
 - O valor de teste R$19,90 / R$39,90 / R$59,90 para 1 / 5 / 10 imagens não é oferta ativa sem validação de margem.

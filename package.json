@@ -10,7 +10,8 @@
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:platform-isolation": "node scripts/check-platform-isolation.mjs",
     "test": "npm run build && node --test tests/*.test.mjs",
-    "smoke:local": "node scripts/smoke-local.mjs"
+    "smoke:local": "node scripts/smoke-local.mjs",
+    "backup:restore:local": "node scripts/backup-restore-local.mjs"
   },
   "dependencies": {
     "next": "16.4.0",

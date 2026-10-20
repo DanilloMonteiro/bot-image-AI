@@ -3,6 +3,7 @@ artifact_type: ux-source-reconciliation
 source: ../spec-ensaios-ia-whatsapp/spec-ensaios-ia-whatsapp.md
 source_id: SPEC-ensaios-ia-whatsapp
 status: complete
+updated: 2026-10-20
 ---
 
 # Reconciliação — Spec de ensaios IA por WhatsApp
@@ -17,9 +18,9 @@ Este registro compara a spec confirmada com [DESIGN.md](DESIGN.md) e [EXPERIENCE
 | CAP-2 | Explicação de IA, finalidade e retenção; consentimento e elegibilidade antes de pedir foto; pausa da coleta se a política não estiver definida/informada; encaminhamento de acesso/exclusão. | Capturado em grande parte. Períodos, cópias de fornecedores e confirmação de exclusão seguem abertos. |
 | CAP-3 | Pix só é confirmado por confirmação autenticada, ligada ao pedido e valor; o resumo comercial vem antes do pagamento. | Capturado; idempotência continua critério de sistema. |
 | CAP-4 | Imagens enviadas pelo WhatsApp, sem afirmar entrega concluída antes da confirmação; semelhança pode variar. | Capturado em parte; formato, recuperação de falha, prazo, critérios visuais e tentativas seguem abertos. |
-| CAP-5 | Prévia opcional, baixa resolução, marca-d’água, aprovação de sócio e reserva de custo. | Capturado; contagem no pacote, frequência, limites e orçamento seguem abertos. |
+| CAP-5 | Prévia opcional, baixa resolução, marca-d’água, aprovação de sócio e reserva de custo. | Capturado; contagem no pacote, frequência, limites e custo por prévia seguem abertos. Os tetos gerais/categorias do piloto foram aprovados em 2026-10-20 e constam em AD-6. |
 | CAP-6 | Pedido de atendimento humano encaminhado com contexto; automação comercial suspensa; primeira resposta em até 24 horas, sem prazo de resolução. | Capturado; 100% de encaminhamento é métrica, não interação detalhada. |
-| CAP-7 | Exibir gastos realizados, comprometidos, reservados e ainda não faturados; teto total de R$500; bloquear qualquer nova operação com custo se saldo for desconhecido/insuficiente e explicar o motivo. | Capturado; divisão do teto entre anúncios e provedores continua aberta. |
+| CAP-7 | Exibir gastos realizados, comprometidos, reservados e ainda não faturados; teto total de R$500; bloquear qualquer nova operação com custo se saldo for desconhecido/insuficiente e explicar o motivo. | Capturado; tetos por categoria e alertas foram aprovados em 2026-10-20 e constam em AD-6/PRD. |
 | Constraints / Non-goals | MVP individual de aniversário para adulto usando a própria foto; sem app, login, portal obrigatório ou entrega dependente de ZIP. | Capturado. Autorização para publicidade, portfólio ou treinamento não é presumida. |
 
 ## Não atribuir à spec

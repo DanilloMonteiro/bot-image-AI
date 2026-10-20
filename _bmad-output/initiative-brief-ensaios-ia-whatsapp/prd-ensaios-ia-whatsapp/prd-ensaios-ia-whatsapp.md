@@ -2,7 +2,7 @@
 title: Ensaios IA por WhatsApp
 status: draft
 created: 2026-10-08
-updated: 2026-10-09
+updated: 2026-10-20
 ---
 
 # PRD: Ensaios IA por WhatsApp
@@ -21,7 +21,7 @@ O produto permite que uma pessoa encomende fotos personalizadas sem aprender a e
 
 A experiência deve parecer simples e acolhedora, enquanto o sistema trata dinheiro, autorização de imagem, geração e entrega por regras verificáveis. A IA interpreta e redige mensagens; regras de negócio e dados autenticados controlam preço, pedido, Pix, reembolso, amostras e transferência para uma pessoa.
 
-O piloto comercial deve validar procura, qualidade percebida, conversão, custo variável e capacidade operacional de dois sócios. Os preços, metas e fornecedores do brief são hipóteses iniciais. O teto total declarado para o piloto é de R$500 e inclui mídia e custos operacionais do piloto, conforme brief e plano fonte; a alocação e o mecanismo de contenção de gastos comprometidos ainda precisam ser definidos.
+O piloto comercial deve validar procura, qualidade percebida, conversão, custo variável e capacidade operacional de dois sócios. Os preços, metas e provedores de WhatsApp, Pix e IA do brief são hipóteses iniciais. Em 2026-10-20, os sócios aprovaram o teto de R$500 para o piloto e sua distribuição por categoria: anúncios R$220; IA R$110; aplicação/worker/PostgreSQL/Bucket/armazenamento/egress/backups Railway R$65; domínio/acessórios R$25; reserva para tarifas Meta/Pix, câmbio e retentativas R$80. Os gastos precisam ser reconciliados com compromissos e cobranças ainda não faturadas.
 
 ## 2. Público e necessidades
 
@@ -37,7 +37,7 @@ O piloto comercial deve validar procura, qualidade percebida, conversão, custo 
 
 **Compradores por presente:** fora do MVP. O Cliente precisa ser adulto e enviar a própria foto; pedidos para retratar outra pessoa exigiriam fluxo de autorização futuro.
 
-**Usuários internos:** os dois sócios, que precisam acompanhar exceções, custos, aprovações de prévia, reclamações e pedidos sem ler cada conversa normal.
+**Usuários internos:** Isaac e seu sócio, as únicas duas contas administradoras permitidas no painel, que acompanham exceções, custos, aprovações de prévia, reclamações e pedidos sem ler cada conversa normal. Cada um usa conta individual com MFA e ações auditadas.
 
 ### 2.2 Limites de público no MVP
 
@@ -221,13 +221,14 @@ O painel concentra exceções e tarefas que precisam de intervenção, sem exigi
 
 ### 4.10 Controle de gastos do piloto
 
-**FR-44 — Controlar o teto total de gastos do piloto.** O sistema acompanha gastos realizados, comprometidos e reservados em todas as categorias do piloto e considera custos ainda não faturados antes de autorizar novas operações com custo.  
-**Consequências:** a soma projetada de mídia, IA, hospedagem, domínio, mensagens, Pix, prévias e retentativas não pode ultrapassar R$500; se o custo de uma nova geração ou prévia não couber no saldo disponível, o sistema a bloqueia e alerta os sócios; cada categoria recebe um limite aprovado antes do piloto; campanha de anúncio e provedores só iniciam com teto configurado, e atingir o limite suspende novos gastos até reconciliação e liberação por um sócio.
+**FR-44 — Controlar o teto total e os limites por categoria do piloto.** O sistema acompanha gastos realizados, comprometidos e reservados em todas as categorias e considera custos ainda não faturados, câmbio e taxas antes de autorizar novas operações com custo.
+
+**Consequências:** o teto autorizado é R$500: anúncios R$220; IA R$110; infraestrutura Railway (app, worker, PostgreSQL, Bucket, armazenamento, egress e backups) R$65; domínio/acessórios R$25; reserva de tarifas Meta/Pix, câmbio e retentativas R$80. Não há transferência automática entre categorias. Alertas ocorrem em 60%, 80% e 95% do total e da respectiva categoria. Custo/saldo desconhecido ou limite atingido bloqueia nova ação paga. Antes de ativar cobrança externa, configura-se teto no provedor quando disponível ou reconciliação manual antes de retomar; qualquer um dos dois sócios administradores pode pausar gastos e liberar reserva apenas após estado terminal e conciliação, com auditoria.
 
 ## 5. Requisitos não funcionais transversais
 
 - **NFR-1 — Integridade transacional:** repetição de webhook, mensagem ou tarefa não pode duplicar cobrança, confirmar pagamento indevido, gerar imagens faturáveis em duplicidade nem liberar prévia além do orçamento.
-- **NFR-2 — Privacidade e acesso:** fotos e resultados ficam em armazenamento privado; acesso administrativo é autenticado e restrito por função; transferência de dados usa canal seguro. O sistema mantém trilha de auditoria das ações sensíveis.
+- **NFR-2 — Privacidade e acesso:** fotos e resultados ficam em armazenamento privado; somente as duas contas individuais de Isaac e seu sócio, incluídas explicitamente na lista permitida, acessam o painel, com MFA, sem cadastro público nem credenciais compartilhadas; transferência de dados usa canal seguro. O sistema mantém trilha de auditoria das ações sensíveis.
 - **NFR-3 — Confiabilidade operacional:** falhas de webhook, fila, geração e entrega ficam visíveis como estados recuperáveis, com retentativas limitadas, alertas e caminho de exceção. Metas numéricas de disponibilidade, RTO e RPO ainda não foram definidas.
 - **NFR-4 — Clareza e acessibilidade conversacional:** a experiência funciona em português brasileiro, com frases diretas e sem exigir habilidade técnica, cadastro, formulário, instalação de aplicativo ou memorização de comandos.
 - **NFR-5 — Observabilidade de custo e qualidade:** custos variáveis, uso de provedores, falhas, retentativas, conversão de prévia e resultados de entrega podem ser auditados por período e Pedido.
@@ -240,7 +241,7 @@ O painel concentra exceções e tarefas que precisam de intervenção, sem exigi
 ### 6.1 Negócio e operação
 
 - Operação inicial por dois sócios; o painel deve destacar exceções e aprovações em vez de depender de leitura constante das conversas.
-- O teto total do piloto é R$500, abrangendo mídia e custos operacionais. A divisão entre categorias e o método para conter gastos já comprometidos mas ainda não faturados precisam ser definidos.
+- O teto autorizado do piloto é R$500, abrangendo mídia e custos operacionais. Limites aprovados: anúncios R$220; IA R$110; Railway (app, worker, PostgreSQL, Bucket, armazenamento, egress e backups) R$65; domínio/acessórios R$25; reserva Meta/Pix, câmbio e retentativas R$80. Contabilizar valores comprometidos e ainda não faturados, impostos e câmbio; não migrar saldos de categoria sem decisão explícita.
 - O catálogo inicial contém somente o modelo individual de aniversário; novos modelos dependem de decisão posterior. Preços e pacotes de teste são hipóteses, não promessas comerciais.
 
 ### 6.2 Segurança, privacidade e conteúdo
@@ -328,8 +329,8 @@ Itens para resolver ou atribuir antes de usar este PRD como contrato completo de
 7. **[Parcialmente decidido antes do piloto] Suporte humano — fundadores.** Não há horário fixo; o prazo para a primeira resposta humana é de até 24 horas. Definir prioridade e canal de notificação; prazo de resolução continua em aberto.
 8. **[Antes de anunciar e coletar fotos] Retenção e exclusão — jurídico/fundadores.** Definir e informar ao Cliente os prazos por tipo de dado, cópias em provedores, tratamento de pedidos de acesso/exclusão e confirmação; nenhuma foto deve ser coletada enquanto a política não estiver definida.
 9. **[Antes de ativar o canal] WhatsApp Business Platform — fundadores/operadores.** Confirmar elegibilidade da conta, regras de opt-in/templates/janela, custos efetivos no Brasil e a forma de oferecer rota clara e imediata para suporte humano sem menu persistente.
-10. **[Antes de fechar arquitetura] Fornecedores e custos — fundadores.** Comparar provedores de texto e imagem, fidelidade, privacidade, custo por tentativa e condições de tratamento de fotos; validar Asaas e hospedagem candidata.
-11. **[Antes de ativar gastos] Limite do piloto — fundadores/operadores.** Definir alocação por categoria, ferramenta/rotina de bloqueio de novos gastos, reconciliação de cobranças não faturadas e responsável por pausar anúncios e provedores; o total permanece limitado a R$500.
+10. **[Antes das integrações] Provedores e custos externos — fundadores.** Comparar provedores de WhatsApp, Pix, texto e imagem por custo, fidelidade, privacidade, limites de gasto e tratamento de fotos; validar Asaas e termos antes de habilitar cobranças ou imagens reais. Hospedagem escolhida: Railway, região US East/Virgínia para serviços e IAD para Bucket; medir latência após implantação.
+11. **[Resolvido em 2026-10-20; operacionalizar antes de gastos externos] Limites do piloto — fundadores/operadores.** Teto total e alocação aprovados conforme §6.1/FR-44. Antes de cada integração externa, configurar limite no provedor quando disponível ou reconciliar manualmente compromissos e cobranças não faturadas; alerta sozinho não garante interrupção imediata.
 12. **[Antes do piloto] Pesquisa e métricas — fundadores.** Definir medidas e limiares para procura/conversão, qualidade percebida dos ensaios e capacidade/esforço operacional dos dois sócios, além das medidas de usabilidade, prazo de entrega, suporte, CAC e margem; registrar critérios para decidir se o piloto continua ou é interrompido.
 13. **[Detalhar no handoff de UX] Operação das notificações — fundadores/UX.** UJ-2 registra que Carlos abre notificações acumuladas quando disponível e que os sócios responderão em até 24 horas. Detalhar prioridade de triagem, critérios de resolução e quando a automação retoma a conversa; não há horário fixo nem prazo de resolução aprovado.
 14. **[Antes de incluir áudio] Áudio — fundadores/UX.** Decidir se notas de voz fazem parte do MVP; se habilitadas, definir transcrição, falhas e consentimento.
@@ -338,7 +339,7 @@ Itens para resolver ou atribuir antes de usar este PRD como contrato completo de
 
 ## 11. Índice de hipóteses
 
-- **Decisão das fontes:** o teto total do piloto é R$500, incluindo mídia e custos operacionais; a divisão e os mecanismos de controle ainda são propostas.
+- **Decisão das fontes, detalhada pelos sócios em 2026-10-20:** teto total autorizado de R$500 e limites de R$220 para anúncios, R$110 para IA, R$65 para Railway/app/worker/PostgreSQL/Bucket/backups/egress, R$25 para domínio/acessórios e R$80 de reserva para Meta/Pix/câmbio/retentativas. Alertas em 60/80/95%; bloquear quando custo/saldo for desconhecido ou teto atingido; não transferir saldo automaticamente e reconciliar cobrança externa/não faturada antes de liberar reserva.
 - **Hipótese das fontes:** os preços de 1, 5 e 10 imagens listados em §6.4 são valores de teste, ainda sem validação de margem.
 - **Decisão registrada:** apenas adultos enviando a própria foto podem usar o MVP; fotos de terceiros e de menores são recusadas.
 - **Decisão registrada:** pedidos de alteração/insatisfação vão ao painel; Claudia confirma o encaminhamento sem prometer ajuste ou reembolso antes da decisão dos sócios.

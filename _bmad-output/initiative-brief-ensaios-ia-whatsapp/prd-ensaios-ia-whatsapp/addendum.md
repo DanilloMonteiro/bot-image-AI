@@ -4,13 +4,14 @@ This file keeps technical and operational detail from the supplied source plan t
 
 ## Technical direction from the source plan
 
-- Proposed TypeScript monorepo using pnpm, with API, worker, admin web app, domain, database, integrations, AI, and shared packages. The proposed API is Fastify; the admin is Next.js; persistence is PostgreSQL through Drizzle.
-- Proposed durable job processing uses PostgreSQL with pg-boss, transactional outbox, dead-letter handling, bounded retries, idempotency keys, and periodic reconciliation. Redis is excluded from the initial version.
+- Decision (2026-10-20): keep the repository's modular TypeScript monolith: Next.js app plus a separate long-running Node worker, PostgreSQL through the existing `pg` package, and no Redis. The repository does not currently select an ORM or migration tool; keep that choice open until implementation details are reviewed.
+- Selected durable job processing uses PostgreSQL with pg-boss, transactional outbox, bounded retries, idempotency keys, and periodic reconciliation. Redis is excluded.
 - Proposed AI boundary: the model returns structured intent, entities, tone, confidence, escalation state, response draft, and requested action. Backend policy checks authorize typed actions; model text is never authoritative for price, payment, refunds, discounts, or sample approval.
-- Proposed adapters: Meta WhatsApp Cloud API, Asaas Pix, a conversational model provider, an image-generation provider, and private S3-compatible storage.
-- Proposed admin controls include MFA, admin/operator roles, escalation inbox, real-time updates, audit history, and mutual exclusion when an operator takes a conversation.
-- Hosting direction: Railway for API, worker, and PostgreSQL is the initial recommendation; AWS Lightsail with Docker Compose is an alternative with more operating work. Both remain subject to quotation and deployment checks. The source explicitly warns that a low monthly plan or credit is not a hard cap on total consumption.
-- Deployment proposals include HTTPS webhooks, Docker, backups, observability, alerts, spend limits, restricted network access, and encrypted offsite backups where applicable.
+- Providers for WhatsApp, Pix, conversational AI, and image generation remain candidates. Private object storage is selected as a Railway Bucket through an S3-compatible adapter.
+- The admin panel is restricted to Isaac and his business partner through two individually listed accounts with MFA and audit history. No public registration or shared credentials; either partner admin can perform permitted administrative actions.
+- Decision (2026-10-20): Railway is the deployment target for the Next.js app, Node worker, and PostgreSQL. The consulted Railway pricing table does not publish region-specific rates, so no cheaper region can be substantiated from published prices. Select US East / Virginia (`us-east4-eqdc4a`) for services and IAD (`iad`) for the Bucket as the closest listed region to São Paulo and the best geographic latency estimate; actual application latency remains to be measured after deployment. The Bucket region cannot be changed after creation, and its data will be stored in the US.
+- Security gate (2026-10-20): the repository currently pins Next.js 16.4.0, which is included in the versions affected by the official 2026-10-14 critical/high advisories. Upgrade to a patched release before any internet-facing deployment; 16.4.2 is the latest stable release checked for this decision ([security update](https://nextjs.org/blog/nextjs-security-update-october-14-2026), [release](https://github.com/vercel/next.js/releases/tag/v16.4.2)). The code dependency is not changed by this architecture decision.
+- Deployment uses HTTPS webhooks, separated environments/secrets, private database networking, Railway Bucket credentials limited to server/worker, and tested database recovery. Railway hard limits are billing-cycle limits in USD and can stop all workloads; they supplement, but do not enforce, the app's category limits in BRL.
 
 ## Provisional operational values and unresolved rules
 
@@ -23,11 +24,23 @@ This file keeps technical and operational detail from the supplied source plan t
 - The plan proposes counting an approved preview as the first image in a paid package; the brief does not explicitly confirm this accounting rule.
 - Escalation priority rules, notification channels, and a resolution deadline remain open; there are no fixed support hours, and the first human response is due within 24 hours.
 
-## Pilot economics to validate
+## Pilot economics and controls
 
-- The R$500 limit is the total pilot ceiling across ad spend and operating/variable costs. The source proposes the allocation below, subject to confirmation; account for incurred but not yet billed charges.
+- Decision (2026-10-20): the R$500 total and the following category ceilings are authorized for the pilot. Include committed, reserved, incurred, unbilled, tax, and FX costs in reconciliation; no category balance moves automatically to another category.
+
+| Category | Approved ceiling |
+| --- | ---: |
+| Instagram/Meta ads | R$220 |
+| AI providers | R$110 |
+| Railway app, worker, PostgreSQL, Bucket, storage, service egress, and backups | R$65 |
+| Domain/accessories | R$25 |
+| Reserve for Meta/Pix fees, FX, and retries | R$80 |
+| **Pilot total** | **R$500** |
+
+- Alert at 60%, 80%, and 95% of the total and each category. Block a new paid action when cost/balance is unknown or a cap is reached. Either partner admin may pause spending; release a reservation only after terminal outcome and reconciliation, with audit evidence. Set provider-level caps where available; otherwise reconcile external and unbilled costs before resuming.
+- Railway's published Bucket storage rate is US$0.015/GB-month; uploads from a Railway service incur service egress charges. Convert platform charges to BRL using the recorded rate/fees in the ledger. A Railway Bucket hard limit suspends access while stored data continues to incur charges; a compute hard limit takes workloads offline, so neither is a substitute for the app-level budget gate.
 - Track cost per order and conversation, CAC, conversion, contribution margin, delivery success, retries, refunds/revisions, preview conversion, and partner handling time. The numerical targets in the brief are initial hypotheses, not forecasts.
-- Any external cost ceiling needs enforcement or provider-level controls; alerts alone may not stop charges immediately.
+- The Railway Bucket is private and S3-compatible, but current documentation does not list server-side encryption, object versioning, or bucket lifecycle configuration as supported. Validate international transfer, encryption, retention/deletion and backup handling for all personal data processed in the US before using real customer data; synthetic-only flows may proceed through platform gates.
 
 ## External discovery: market examples and official sources
 
@@ -44,27 +57,27 @@ Research accessed 2026-10-08. Competitor statements are vendor claims, not indep
 
 ## Complementos de validação e operação
 
-- O teto de R$500 abrange mídia e custos operacionais. A divisão por categoria, alertas, limites de campanha/API e a rotina para pausar gastos antes de ultrapassar o teto precisam ser definidos; custos incorridos e ainda não faturados entram na reconciliação.
+- Decision (2026-10-20): category ceilings, 60/80/95% alerts, fail-closed behavior, and the partner pause/release authority are approved as recorded above. Configure provider caps where available; otherwise reconcile committed and unbilled external charges before resuming. Include FX and taxes in the R$500 total.
 - A fonte sugere Dev A para API, integrações, domínio comercial, pagamento e worker; Dev B para agente conversacional, qualidade, painel/inbox e UX; ambos para segurança, testes e deploy. É uma sugestão de trabalho, não atribuição confirmada.
 - A validação comercial proposta inclui simulação de economia unitária e sensibilidade de CAC, campanha pequena, experimento de anúncios, teste assistido com pelo menos cinco pessoas de baixa afinidade digital e decisão de continuar apenas com CAC e margem de contribuição positivos.
-- Detalhes de arquitetura a manter fora dos FRs incluem rotas internas, ferramentas tipadas permitidas, estados e transições de pedido/conversa, tabelas e índices únicos, sequência de webhook e worker, reconciliação e reserva atômica de limite de prévia. São insumos para arquitetura e tickets, não escolhas confirmadas pelo PRD.
+- Detalhes de arquitetura a manter fora dos FRs incluem rotas internas, ferramentas tipadas permitidas, estados e transições de pedido/conversa, tabelas e índices únicos, sequência de webhook e worker, e implementação da reserva atômica de custo de prévia. São insumos para arquitetura e tickets; tetos, bloqueio fail-closed, alertas e reconciliação já são requisitos aprovados no PRD/AD-6.
 - A fonte também propõe uma lista de QA visual, limites de custo por saída, pausa do worker em anomalias, e envio direto pelo WhatsApp sem ZIP ou portal externo. Transformar esses pontos em critérios de aceite após confirmar o padrão de qualidade, orçamento por imagem e experiência de entrega.
 - Operação do canal deve guardar opt-in/opt-out, janela de 24 horas, uso de templates aprovados fora da janela e salvaguardas contra notificações duplicadas. Validar regras e custos na conta real antes de lançar.
 
-## Proposta orçamentária do plano fonte — valores provisórios
+## Alocação aprovada do orçamento do piloto — 2026-10-20
 
-A fonte trata o teto total do piloto como R$500 e sugere esta alocação:
+Os sócios autorizaram gasto até R$500 no total do piloto, com os seguintes tetos por categoria:
 
-| Categoria | Valor proposto |
+| Categoria | Teto aprovado |
 | --- | ---: |
-| Anúncios no Instagram | R$220 |
-| Créditos de IA de texto e imagem | R$110 |
-| Hospedagem, banco e backup do piloto | R$65 |
+| Anúncios no Instagram/Meta | R$220 |
+| Provedores de IA | R$110 |
+| Railway: app, worker, PostgreSQL, Bucket, armazenamento, egress e backups | R$65 |
 | Domínio e acessórios | R$25 |
 | Reserva para Meta, Pix, câmbio e retentativas | R$80 |
 | **Total** | **R$500** |
 
-O plano propõe alertas de gasto em 60%, 80% e 95%, parar anúncios no teto e contabilizar custos incorridos ainda não faturados. A regra para interromper uso de provedores e API quando houver risco de ultrapassar o teto segue por confirmar.
+Alertas ocorrem em 60%, 80% e 95% do total e da categoria. Bloquear novas ações pagas quando custo/saldo for desconhecido ou qualquer teto for atingido; não transferir saldo entre categorias automaticamente. Qualquer um dos dois sócios administradores pode pausar gastos e liberar reservas após estado terminal e conciliação, com auditoria. Configurar teto no provedor externo quando disponível; sem esse controle, reconciliar valores realizados, comprometidos e não faturados antes de retomar.
 
 ### Simulação econômica ilustrativa
 

@@ -51,7 +51,8 @@ Adultos que querem retratos personalizados podem não saber criar prompts ou pre
 - Não coletar nem encaminhar foto até fornecedor, tratamento externo e política por tipo de dado — foto original, resultados, conversa/consentimento, backups e cópias —, prazos/marcos, exclusão e exceções estarem aprovados e informados. Processar somente após consentimento afirmativo inequívoco.
 - Consentimento para gerar o retrato não autoriza publicidade, portfólio ou treinamento de IA; cada uso adicional exige autorização separada e explícita.
 - Pix confirmado, preço, desconto, reembolso e autorização de Prévia ou geração adicional dependem de regras verificáveis ou de um sócio autorizado; texto do modelo não autoriza essas ações.
-- O teto total de R$500 inclui anúncios e custos operacionais. Saldos desconhecidos, custos reservados, comprometidos e ainda não faturados são considerados antes de autorizar gasto novo.
+- Decisão de 2026-10-20: o teto de R$500 autoriza até R$220 em anúncios, R$110 em IA, R$65 em aplicação/worker/PostgreSQL/Bucket/egress/backups Railway, R$25 em domínio/acessórios e R$80 de reserva para tarifas Meta/Pix, câmbio e retentativas. Incluir valores reservados, comprometidos, impostos e cobranças não faturadas; não transferir saldo automaticamente entre categorias. Bloquear gasto novo se custo/saldo for desconhecido ou limite atingido; os dois sócios administradores podem pausar gastos e liberar reservas após conciliação, com auditoria.
+- Decisão de arquitetura de 2026-10-20: Railway com PostgreSQL + pg-boss, sem Redis, e Railway Bucket privado para objetos. App/worker/PostgreSQL em US East/Virgínia; Bucket em IAD. Somente Isaac e seu sócio acessam o painel, por contas individuais com MFA e auditoria. Antes de tratar quaisquer dados pessoais reais na Railway nos EUA — incluindo fotos, resultados, conversas e consentimentos — validar transferência internacional, criptografia adequada, retenção e exclusão.
 - Preços de teste de R$19,90, R$39,90 e R$59,90 para 1, 5 e 10 imagens não são finais; não anunciar antes da validação de margem. Não prometer prazo antes de teste de capacidade nem semelhança perfeita.
 - Insatisfação é avaliada pelos sócios. Não prometer ajuste, reembolso ou prazo de resolução antes de decisão; geração adicional requer autorização.
 - O sistema começa na primeira mensagem recebida no WhatsApp. Anúncio, clique e transição pelo Instagram ficam fora da experiência do produto; atribuição de campanha usa somente metadados fornecidos pelo canal.
@@ -81,8 +82,8 @@ No piloto, pelo menos 90% das conversas de teste concluem a compra sem comandos,
 - Qual prazo de entrega será comunicado após os testes de capacidade, e quais critérios visuais e limite de tentativas serão usados?
 - Qual política de revisão, quantidade de ajustes, cancelamento e reembolso vale para resultados insatisfatórios?
 - A Prévia conta como a primeira imagem do pacote? Quais limites de frequência e orçamento serão configurados?
-- Como o teto de R$500 será dividido e imposto entre anúncios e provedores, incluindo custos não faturados, e quem pode pausar cada fonte?
-- Quais regras de elegibilidade, preço, consentimento, templates, janela, rota humana e transparência se aplicam à conta WhatsApp escolhida? Quais provedores e custos de hospedagem serão aprovados?
+- Como configurar na prática os limites dos provedores externos selecionados e reconciliar câmbio, impostos e cobranças não faturadas dentro dos tetos já aprovados?
+- Quais regras de elegibilidade, preço, consentimento, templates, janela, rota humana e transparência se aplicam à conta WhatsApp escolhida? Quais provedores de WhatsApp/Pix/IA serão aprovados e como seus termos de dados atendem ao gate de fotos?
 - Quais métodos e limiares medem procura/conversão, qualidade percebida, usabilidade, suporte, CAC, margem e esforço/capacidade dos sócios, e que resultados determinam continuar ou parar?
 - Áudio, prioridades de triagem, canais de notificação, contatos pós-entrega e retomada da automação fazem parte do MVP?
 - Qual dispositivo será prioritário para o painel e quais larguras/breakpoints e meta de acessibilidade serão confirmados?

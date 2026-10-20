@@ -24,3 +24,11 @@ Omitting `cost` means unknown or not yet sourced; it is not equivalent to zero. 
 - **Execution:** count attempts and derive worker duration from correlated safe worker lifecycle events for the same task UUID and attempt. Use `attempt_count` and `duration_seconds` with `origin: "application_observation"`. Add a cost only after an execution tariff is approved and the applicable source supports the amount; otherwise omit it.
 
 Hosting/database provider exports, invoices, a queue allocation rule, execution tariffs, and provider telemetry remain subject to owner approval. This contract selects no vendor, provisions no service, and claims no real external cost. Manual records should contain aggregate usage and source category only; do not put customer data, media bytes, credentials, exception text, or event payloads into usage records.
+
+## Railway pilot reconciliation
+
+After Railway access and provider telemetry are approved, capture hosting and PostgreSQL usage for the same billing period with `railway usage --json` and the project usage report (`railway usage projects --project <project-id> --period previous --json`). Reconcile those values against the matching invoice before recording cost. Keep job and attempt counts sourced from retained pg-boss rows, as described above; pg-boss runs in the PostgreSQL service and has no separate queue-provider charge.
+
+Railway Bucket storage and related transfer charges are billed separately from the Compute hard limit. Inspect the provider Bucket usage (`railway bucket info --json`) and its invoice separately, and do not fold that amount into the current v1 resource enum. Until a versioned contract change and Budget allocation rule are approved, keep Bucket evidence in the operational reconciliation record and omit a v1 `cost` field for it. Do not treat an absent usage value as zero or estimate cost from object count or traffic.
+
+The repository does not yet contain provider telemetry or verified invoice data. Do not create v1 usage records for Railway until an owner captures the source, period, unit, and corresponding invoice; leave cost absent whenever it is not sourced.

@@ -109,7 +109,7 @@ function responseCallsHaveNoStore(source, label, errors) {
   }
 }
 
-export function validatePlatformIsolation({ compose, dockerignore, envExample, smokePostRoute, smokeGetRoute, smokeRetryRoute, smokeRetryHandler }) {
+export function validatePlatformIsolation({ compose, dockerignore, envExample, smokePostRoute, smokeGetRoute, smokeRetryRoute, smokeSubmitHandler, smokeRetryHandler }) {
   const errors = [];
   const services = parseServices(compose);
   if (!services) errors.push('compose.yaml: missing services section');
@@ -168,7 +168,10 @@ export function validatePlatformIsolation({ compose, dockerignore, envExample, s
       errors.push(`${label}: route must be force-dynamic`);
     }
   }
-  responseCallsHaveNoStore(smokePostRoute, 'POST /api/internal/smoke', errors);
+  if (!/handleSmokeSubmitRequest\s*\(/.test(smokePostRoute)) {
+    errors.push('POST /api/internal/smoke: use the checked no-store request handler');
+  }
+  responseCallsHaveNoStore(smokeSubmitHandler, 'POST /api/internal/smoke', errors);
   responseCallsHaveNoStore(smokeGetRoute, 'GET /api/internal/smoke/{id}', errors);
   if (!/handleSmokeRetryRequest\s*\(/.test(smokeRetryRoute)) {
     errors.push('POST /api/internal/smoke/{id}/retry: use the checked no-store request handler');
@@ -192,6 +195,7 @@ function main() {
       smokePostRoute: read(root, 'src/app/api/internal/smoke/route.ts'),
       smokeGetRoute: read(root, 'src/app/api/internal/smoke/[id]/route.ts'),
       smokeRetryRoute: read(root, 'src/app/api/internal/smoke/[id]/retry/route.ts'),
+      smokeSubmitHandler: read(root, 'src/adapters/http/smoke-submit-handler.ts'),
       smokeRetryHandler: read(root, 'src/adapters/http/smoke-retry-handler.ts'),
     });
     if (errors.length) {

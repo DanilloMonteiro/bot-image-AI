@@ -6,10 +6,14 @@ import { readFileSync } from 'node:fs';
 const require = createRequire(import.meta.url);
 const { PlatformSmoke } = require('../dist/modules/platform-smoke/use-cases.js');
 const { isAuthorized } = require('../dist/adapters/http/staging-auth.js');
+const { handleSmokeSubmitRequest } = require('../dist/adapters/http/smoke-submit-handler.js');
+const { getReadinessResult, readinessResponse } = require('../dist/adapters/http/readiness-handler.js');
+const { isPublicStoryPath, shouldBlockCustomerMediaPath } = require('../dist/adapters/http/production-traffic-gate.js');
 const { mapSmokeRetryResult } = require('../dist/adapters/http/smoke-retry-response.js');
 const { handleSmokeRetryRequest } = require('../dist/adapters/http/smoke-retry-handler.js');
 const { emitPlatformEvent } = require('../dist/adapters/console/platform-events.js');
 const { handlePlatformSmokeJob } = require('../dist/worker/platform-smoke-handler.js');
+const { createWorkerHealthServer } = require('../dist/worker/health-server.js');
 const { isPlatformUsageRecordV1 } = require('../dist/contracts/platform-usage/v1.js');
 
 const taskId = 'e5ea330c-48e5-44c2-b383-7382890524be';
@@ -163,7 +167,11 @@ test('recovery rejects missing, active, and queued tasks without changing them',
 });
 
 test('retry HTTP handler authorizes before repository access and rejects invalid or queued retries', async () => {
-  const previous = process.env.STAGING_SMOKE_SECRET;
+  const previous = {
+    environment: process.env.PLATFORM_ENVIRONMENT,
+    stagingSecret: process.env.STAGING_SMOKE_SECRET,
+  };
+  process.env.PLATFORM_ENVIRONMENT = 'staging';
   process.env.STAGING_SMOKE_SECRET = 'a'.repeat(64);
   try {
     const repository = new DurableFake();
@@ -204,8 +212,68 @@ test('retry HTTP handler authorizes before repository access and rejects invalid
     assert.equal(repositoryCalls, 1);
     assert.deepEqual(repository.jobs.get(queuedTask.id), queuedJobBefore);
   } finally {
-    if (previous === undefined) delete process.env.STAGING_SMOKE_SECRET;
-    else process.env.STAGING_SMOKE_SECRET = previous;
+    if (previous.environment === undefined) delete process.env.PLATFORM_ENVIRONMENT;
+    else process.env.PLATFORM_ENVIRONMENT = previous.environment;
+    if (previous.stagingSecret === undefined) delete process.env.STAGING_SMOKE_SECRET;
+    else process.env.STAGING_SMOKE_SECRET = previous.stagingSecret;
+  }
+});
+
+test('smoke submit uses the environment-specific secret and rejects credentials before writes', async () => {
+  const previous = {
+    environment: process.env.PLATFORM_ENVIRONMENT,
+    stagingSecret: process.env.STAGING_SMOKE_SECRET,
+    productionSecret: process.env.PRODUCTION_SMOKE_SECRET,
+  };
+  process.env.PLATFORM_ENVIRONMENT = 'production';
+  process.env.STAGING_SMOKE_SECRET = 's'.repeat(64);
+  process.env.PRODUCTION_SMOKE_SECRET = 'p'.repeat(64);
+  try {
+    let writes = 0;
+    const request = (secret, body) => new Request('http://local/api/internal/smoke', {
+      method: 'POST',
+      headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+      ...(body === undefined ? {} : { body }),
+    });
+    const acceptSynthetic = async () => {
+      writes += 1;
+      return { id: taskId, state: 'queued', attemptNumber: null };
+    };
+
+    const missing = await handleSmokeSubmitRequest(request(), acceptSynthetic);
+    const stagingSecret = await handleSmokeSubmitRequest(
+      request(process.env.STAGING_SMOKE_SECRET, JSON.stringify({ type: 'customer_upload', payload: 'ignored' })),
+      acceptSynthetic,
+    );
+    assert.equal(missing.status, 401);
+    assert.equal(stagingSecret.status, 401);
+    assert.equal(missing.headers.get('Cache-Control'), 'no-store');
+    assert.equal(writes, 0);
+
+    const bodyBearing = await handleSmokeSubmitRequest(
+      request(process.env.PRODUCTION_SMOKE_SECRET, JSON.stringify({ type: 'customer_upload', payload: 'ignored' })),
+      acceptSynthetic,
+    );
+    assert.equal(bodyBearing.status, 400);
+    assert.equal(bodyBearing.headers.get('Cache-Control'), 'no-store');
+    assert.equal(writes, 0);
+
+    const bodyless = await handleSmokeSubmitRequest(request(process.env.PRODUCTION_SMOKE_SECRET, ''), acceptSynthetic);
+    assert.equal(bodyless.status, 202);
+    assert.equal(bodyless.headers.get('Cache-Control'), 'no-store');
+    assert.deepEqual(await bodyless.json(), { id: taskId, state: 'queued', attemptNumber: null });
+    assert.equal(writes, 1);
+
+    const source = readFileSync(new URL('../src/app/api/internal/smoke/route.ts', import.meta.url), 'utf8');
+    assert.match(source, /new PlatformSmoke\(new PostgresSmokeRepository\(\)\)\.accept\(\)/);
+    assert.doesNotMatch(source, /request\.json\s*\(/);
+  } finally {
+    if (previous.environment === undefined) delete process.env.PLATFORM_ENVIRONMENT;
+    else process.env.PLATFORM_ENVIRONMENT = previous.environment;
+    if (previous.stagingSecret === undefined) delete process.env.STAGING_SMOKE_SECRET;
+    else process.env.STAGING_SMOKE_SECRET = previous.stagingSecret;
+    if (previous.productionSecret === undefined) delete process.env.PRODUCTION_SMOKE_SECRET;
+    else process.env.PRODUCTION_SMOKE_SECRET = previous.productionSecret;
   }
 });
 
@@ -215,16 +283,89 @@ test('failed persistence cannot report acceptance', async () => {
 });
 
 test('missing or wrong secret denies access before state is read', () => {
-  const previous = process.env.STAGING_SMOKE_SECRET;
+  const previous = {
+    environment: process.env.PLATFORM_ENVIRONMENT,
+    stagingSecret: process.env.STAGING_SMOKE_SECRET,
+  };
+  process.env.PLATFORM_ENVIRONMENT = 'staging';
   process.env.STAGING_SMOKE_SECRET = 'a'.repeat(64);
   try {
     assert.equal(isAuthorized(new Request('http://local')), false);
     assert.equal(isAuthorized(new Request('http://local', { headers: { Authorization: 'Bearer wrong' } })), false);
     assert.equal(isAuthorized(new Request('http://local', { headers: { Authorization: `Bearer ${'a'.repeat(64)}` } })), true);
   } finally {
-    if (previous === undefined) delete process.env.STAGING_SMOKE_SECRET;
-    else process.env.STAGING_SMOKE_SECRET = previous;
+    if (previous.environment === undefined) delete process.env.PLATFORM_ENVIRONMENT;
+    else process.env.PLATFORM_ENVIRONMENT = previous.environment;
+    if (previous.stagingSecret === undefined) delete process.env.STAGING_SMOKE_SECRET;
+    else process.env.STAGING_SMOKE_SECRET = previous.stagingSecret;
   }
+});
+
+test('web and worker readiness return safe 200 and 503 responses with no-store', async () => {
+  const ready = await getReadinessResult(async () => true);
+  const unavailable = await getReadinessResult(async () => { throw new Error('database-password sentinel'); });
+  assert.deepEqual(ready, { status: 200, body: { status: 'ok' } });
+  assert.deepEqual(unavailable, { status: 503, body: { status: 'unavailable' } });
+  assert.equal(JSON.stringify(unavailable).includes('database-password sentinel'), false);
+  assert.equal(readinessResponse(ready).headers.get('Cache-Control'), 'no-store');
+
+  let dependencyAvailable = true;
+  const server = createWorkerHealthServer(async () => dependencyAvailable);
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  const address = server.address();
+  assert.ok(address && typeof address === 'object');
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+  try {
+    const healthy = await fetch(`${baseUrl}/health`);
+    assert.equal(healthy.status, 200);
+    assert.equal(healthy.headers.get('Cache-Control'), 'no-store');
+    assert.deepEqual(await healthy.json(), { status: 'ok' });
+
+    dependencyAvailable = false;
+    const unhealthy = await fetch(`${baseUrl}/health`);
+    assert.equal(unhealthy.status, 503);
+    assert.deepEqual(await unhealthy.json(), { status: 'unavailable' });
+    const notPublic = await fetch(`${baseUrl}/`);
+    assert.equal(notPublic.status, 404);
+    assert.equal(notPublic.headers.get('Cache-Control'), 'no-store');
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('customer and media routes remain blocked until privacy, cost, and backup evidence are approved', () => {
+  const base = { PLATFORM_ENVIRONMENT: 'production' };
+  const approvals = {
+    PRODUCTION_PRIVACY_APPROVED: 'true',
+    PRODUCTION_COST_RECONCILED: 'true',
+    PRODUCTION_BACKUP_RESTORE_VERIFIED: 'true',
+    PRODUCTION_COST_ALERTS_60_80_95_VERIFIED: 'true',
+    PRODUCTION_COMPUTE_HARD_LIMIT_VERIFIED: 'true',
+    PRODUCTION_COST_PAUSE_AUTHORITY_VERIFIED: 'true',
+  };
+  for (const missing of Object.keys(approvals)) {
+    const environment = { ...base, ...approvals };
+    delete environment[missing];
+    assert.equal(shouldBlockCustomerMediaPath('/api/customer/profile', environment), true);
+    assert.equal(shouldBlockCustomerMediaPath('/api/media/photo', environment), true);
+    assert.equal(isPublicStoryPath('/api/customer/profile', environment), false);
+    assert.equal(isPublicStoryPath('/api/media/photo', environment), false);
+  }
+  assert.equal(shouldBlockCustomerMediaPath('/api/customers', base), true);
+  assert.equal(shouldBlockCustomerMediaPath('/api/media/photo', base), true);
+  assert.equal(shouldBlockCustomerMediaPath('/api/internal/smoke', base), false);
+  assert.equal(shouldBlockCustomerMediaPath('/api/media/photo', { ...base, ...approvals }), false);
+  assert.equal(shouldBlockCustomerMediaPath('/api/media/photo', { ...approvals, PLATFORM_ENVIRONMENT: 'staging' }), true);
+  assert.equal(isPublicStoryPath('/api/health', base), true);
+  assert.equal(isPublicStoryPath('/api/internal/smoke', base), true);
+  assert.equal(isPublicStoryPath(`/api/internal/smoke/${taskId}/retry`, base), true);
+  assert.equal(isPublicStoryPath('/', base), false);
+  assert.equal(isPublicStoryPath('/api/other', base), false);
+  assert.equal(isPublicStoryPath('/api/media/photo', base), false);
+  assert.equal(isPublicStoryPath('/api/media/photo', { ...base, ...approvals }), true);
 });
 
 test('worker emits correlated start, retry failure, and completion events', async () => {
@@ -323,11 +464,13 @@ test('infrastructure events and console serialization exclude payloads, credenti
 
   const serialized = JSON.stringify(records);
   assert.equal(serialized.includes(sensitive), false);
-  const emitted = records.map(([, event]) => event);
+  const emitted = records.map(([line]) => JSON.parse(line));
   assert.deepEqual(emitted.map((event) => event.type), [
     'smoke_started', 'infrastructure_error', 'infrastructure_error', 'smoke_attempt_failed', 'smoke_attempt_failed',
   ]);
   assert.deepEqual(emitted.at(-1), {
+    event: 'platform_event',
+    service: 'worker',
     type: 'smoke_attempt_failed',
     correlationId: taskId,
     attemptNumber: 4,
@@ -336,7 +479,7 @@ test('infrastructure events and console serialization exclude payloads, credenti
     errorCode: 'attempt_failed',
   });
   assert.ok(emitted.every((event) => Object.keys(event).every((key) => [
-    'type', 'correlationId', 'attemptNumber', 'state', 'occurredAt', 'errorCode',
+    'event', 'service', 'type', 'correlationId', 'attemptNumber', 'state', 'occurredAt', 'errorCode',
   ].includes(key))));
 });
 

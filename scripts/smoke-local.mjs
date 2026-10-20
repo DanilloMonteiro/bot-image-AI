@@ -5,6 +5,7 @@ const secret = randomBytes(32).toString('hex');
 const project = `imagesystem-smoke-${randomBytes(8).toString('hex')}`;
 const env = {
   ...process.env,
+  PLATFORM_ENVIRONMENT: 'staging',
   STAGING_SMOKE_SECRET: secret,
   POSTGRES_PASSWORD: randomBytes(24).toString('hex'),
   STAGING_SMOKE_TEST_MODE: '1',
@@ -34,12 +35,27 @@ function effectAndJobState(id) {
   const sql = `SELECT COALESCE((SELECT state::text FROM pgboss.job WHERE name = 'platform-smoke' AND id = '${id}'::uuid), 'missing') || ':' || (SELECT count(*)::text FROM platform_smoke_effects WHERE id = '${id}'::uuid)`;
   return composeOutput('exec', '-T', 'db', 'psql', '-U', 'smoke', '-d', 'smoke', '-At', '-c', sql);
 }
+function workerHealthStatus() {
+  const probe = "fetch('http://127.0.0.1:3001/health').then((response) => process.stdout.write(String(response.status))).catch(() => process.exit(1))";
+  return execFileSync('docker', ['compose', '-p', project, 'exec', '-T', 'worker', 'node', '-e', probe], {
+    env, encoding: 'utf8',
+  }).trim();
+}
 function hasPlatformEvent(logs, type, correlationId, attemptNumber, state) {
-  return logs.split('platform_event ').slice(1).some((event) =>
-    event.includes(`type: '${type}'`)
-    && event.includes(`correlationId: '${correlationId}'`)
-    && event.includes(`attemptNumber: ${attemptNumber},`)
-    && event.includes(`state: '${state}'`));
+  return logs.split(/\r?\n/).some((line) => {
+    const start = line.indexOf('{');
+    if (start < 0) return false;
+    try {
+      const event = JSON.parse(line.slice(start));
+      return event.event === 'platform_event'
+        && event.type === type
+        && event.correlationId === correlationId
+        && event.attemptNumber === attemptNumber
+        && event.state === state;
+    } catch {
+      return false;
+    }
+  });
 }
 function checkPostgresAttemptGuard() {
   const source = [
@@ -89,6 +105,7 @@ try {
   assert((await request(base, { method: 'POST', headers: { Authorization: 'Bearer wrong' } }))?.status === 401, 'wrong secret must be 401');
 
   compose('up', '-d', '--wait', 'worker');
+  assert(workerHealthStatus() === '200', 'worker internal health must be ready after connecting to PostgreSQL and pg-boss');
   compose('stop', 'worker');
   const postgresAttemptTaskId = checkPostgresAttemptGuard();
   assert(typeof postgresAttemptTaskId === 'string', 'PostgreSQL attempt check must return its task ID');
@@ -141,6 +158,9 @@ try {
   assert(hasPlatformEvent(recoveredWorkerLogs, 'smoke_completed', failedTask.id, recoveredTerminal.attemptNumber, 'completed'), 'recovered task must emit a correlated completion event from the real worker');
 
   compose('stop', 'db');
+  await waitFor(() => {
+    try { return workerHealthStatus() === '503'; } catch { return false; }
+  }, 'worker health reports database loss');
   const unavailable = await request(base, { method: 'POST', headers: auth });
   assert(unavailable?.status === 503, 'database loss must return 503');
   assert(!(await unavailable.json()).id, 'failed POST must not return an accepted ID');

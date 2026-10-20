@@ -84,6 +84,16 @@ export function ensureReady(): Promise<void> {
   return ready;
 }
 
+export async function checkRuntimeReadiness(): Promise<boolean> {
+  try {
+    await ensureReady();
+    await getPool().query('SELECT 1');
+    return (await getBoss().getQueues([SMOKE_QUEUE])).length === 1;
+  } catch {
+    return false;
+  }
+}
+
 function transactionDb(client: PoolClient): NonNullable<ConnectionOptions['db']> {
   return { executeSql: (text, values) => client.query(text, values) };
 }

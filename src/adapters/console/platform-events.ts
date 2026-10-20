@@ -32,5 +32,5 @@ export function emitPlatformEvent(event: PlatformEvent): void {
     ...(event.type === 'infrastructure_error' ? { errorCode: 'infrastructure_error' } : {}),
   };
 
-  console.info('platform_event', safeEvent);
+  console.info(JSON.stringify({ event: 'platform_event', service: 'worker', ...safeEvent }));
 }

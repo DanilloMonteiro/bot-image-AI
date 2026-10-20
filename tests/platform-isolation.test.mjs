@@ -14,6 +14,7 @@ const baseline = {
   smokePostRoute: read('src/app/api/internal/smoke/route.ts'),
   smokeGetRoute: read('src/app/api/internal/smoke/[id]/route.ts'),
   smokeRetryRoute: read('src/app/api/internal/smoke/[id]/retry/route.ts'),
+  smokeSubmitHandler: read('src/adapters/http/smoke-submit-handler.ts'),
   smokeRetryHandler: read('src/adapters/http/smoke-retry-handler.ts'),
 };
 
@@ -46,9 +47,24 @@ test('database exposure, public web binding, missing env exclusions, and cache g
   });
 
   await t.test('private response cache policy', () => {
-    const config = { ...baseline, smokePostRoute: baseline.smokePostRoute.replace('headers: noStore', 'status: 401') };
+    const config = { ...baseline, smokeSubmitHandler: baseline.smokeSubmitHandler.replace('headers: noStore', 'status: 401') };
     assert.match(validatePlatformIsolation(config).join('\n'), /POST \/api\/internal\/smoke: private response 1 must set Cache-Control: no-store/);
   });
+});
+
+test('Railway graph keeps worker and storage private and production smoke synthetic', () => {
+  const graph = read('.railway/railway.ts');
+  const proxy = read('src/proxy.ts');
+  assert.match(graph, /postgres\('postgres', \{ region: 'us-east4-eqdc4a' \}\)/);
+  assert.match(graph, /bucket\('media', \{ region: 'iad' \}\)/);
+  assert.match(graph, /healthcheck: '\/health'/);
+  assert.match(graph, /PRODUCTION_SMOKE_SECRET: preserve\(\)/);
+  assert.match(graph, /DATABASE_URL: database\.env\.DATABASE_URL/);
+  assert.doesNotMatch(graph, /domains\s*:/);
+  assert.doesNotMatch(graph, /BUCKET_|AWS_ACCESS_KEY|S3_/);
+  assert.match(proxy, /isPublicStoryPath\(request\.nextUrl\.pathname\)/);
+  assert.match(proxy, /matcher: \['\/\(\(\?!_next\/\|favicon\.ico\)\.\*\)'\]/);
+  assert.match(read('compose.yaml'), /PLATFORM_ENVIRONMENT: staging/);
 });
 
 test('invalid environment examples fail without echoing values', () => {

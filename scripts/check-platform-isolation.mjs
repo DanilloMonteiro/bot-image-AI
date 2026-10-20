@@ -144,8 +144,7 @@ export function validatePlatformIsolation({ compose, dockerignore, envExample, s
 
   const ignoreRules = dockerignore.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith('#'));
   const positiveRules = ignoreRules.filter((line) => !line.startsWith('!'));
-  const coversEnv = positiveRules.includes('.env*') || positiveRules.includes('**/.env*')
-    || (positiveRules.includes('.env') && positiveRules.includes('.env.*'));
+  const coversEnv = positiveRules.includes('**/.env*');
   if (!coversEnv || ignoreRules.some((line) => line.startsWith('!') && /\.env/i.test(line))) {
     errors.push('.dockerignore: exclude .env files and variants from the build context');
   }

@@ -40,10 +40,10 @@ async function taskState(id) {
   return response.json();
 }
 
-let started = false;
+let cleanupNeeded = false;
 try {
+  cleanupNeeded = true;
   compose('up', '-d', '--build', '--wait', 'db', 'web');
-  started = true;
   await waitFor(async () => (await request(base, { method: 'POST' }))?.status === 401, 'web ready');
 
   assert((await request(base, { method: 'POST' }))?.status === 401, 'unauthorized POST must be 401');
@@ -95,5 +95,5 @@ try {
   assert(!(await unavailable.json()).id, 'failed POST must not return an accepted ID');
   console.log(`Smoke passed: ${task.id} crashed after commit and recovered with one effect; ${failedTask.id} reached terminal failure and recovered with one effect; auth and database failure checked.`);
 } finally {
-  if (started) compose('down', '-v');
+  if (cleanupNeeded) compose('down', '-v');
 }

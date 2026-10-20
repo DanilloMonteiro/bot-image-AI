@@ -87,3 +87,32 @@ Uma fila no mesmo PostgreSQL reduz provedores e permite enfileirar na transaçã
 - `npm run build` — Next.js e worker compilam.
 - `npm run check:boundaries` — importação proibida entre módulos é rejeitada.
 - `npm run smoke:local` — tarefa autenticada é criada, processada e consultada com a mesma correlação.
+
+## Code Review
+
+### 2026-10-19
+
+**Code review complete.** 0 `decision-needed`, 4 `patch`, 0 `defer`, 11 rejected.
+
+Escopo: commit `63e11af` (story 1.1), conferido contra a `main` atual para não reabrir problemas corrigidos em commits posteriores.
+
+- [x] [Review][Patch] Tratar erros de conexão do pool PostgreSQL para evitar falha não capturada do processo [src/adapters/postgres/smoke-repository.ts:39]
+- [x] [Review][Patch] Codificar `POSTGRES_PASSWORD` antes de interpolar na URI PostgreSQL [compose.yaml:24]
+- [x] [Review][Patch] Limpar o projeto Compose quando `up` falhar parcialmente [scripts/smoke-local.mjs:45]
+- [x] [Review][Patch] Preservar diagnóstico seguro dos erros de inicialização e da fila do worker [src/worker/index.ts:18]
+
+Resolução em 2026-10-19: os quatro patches foram aplicados. `git diff --check` passou; testes não foram executados.
+
+**Rejected**
+
+- `false` (resolvido depois da 1.1): `.env.example` agora inclui `POSTGRES_PASSWORD` em `8b9d94b`.
+- `false` (resolvido depois da 1.1): `.dockerignore` agora exclui `.env*` em `8b9d94b`.
+- `low`: conflito com a porta 3000 depende de outro serviço local estar usando a porta documentada; resolver exige tornar a porta e a URL configuráveis.
+- `low`: retenção indefinida de tarefas sintéticas tem baixo impacto no uso local/CI desta story e uma política de limpeza acrescentaria regras de ciclo de vida.
+- `false`: corrigir checkboxes de execução alteraria o plano que está sendo revisado.
+- `false`: atualizar o Code Map também alteraria o plano que está sendo revisado.
+- `false`: deploy externo foi explicitamente adiado; a story documenta Compose local e CI, conforme a decisão do usuário de seguir sem Railway.
+- `false`: embora o teste unitário use um `Map`, o smoke da story usa PostgreSQL/Compose e valida a fila durável com o worker parado antes de retomá-lo.
+- `false` (resolvido depois da 1.1): o código atual configura `deleteAfterSeconds: 0` e não oferece caminho normal para cancelar ou apagar jobs, evitando o caso de job ausente citado.
+- `false` (resolvido depois da 1.1): o smoke atual cobre esgotamento de retries e recuperação manual, adicionado em `ccedbea`.
+- `false`: a ambiguidade sobre staging externo foi resolvida pela decisão registrada no próprio plano; não há requisito de provisionar um serviço externo nesta story.

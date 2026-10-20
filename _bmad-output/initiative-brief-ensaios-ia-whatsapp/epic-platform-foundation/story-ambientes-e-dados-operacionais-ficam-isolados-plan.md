@@ -84,3 +84,13 @@ Os controles se dividem entre o que o repositório consegue provar e o que depen
 - `npm test` — build e regressões de rotas/cache passam.
 - `npm run smoke:local` — smoke sintético confirma autorização, cache, rede local e persistência; exige Docker Compose.
 - `git diff --check` — não há erros de whitespace.
+
+## Code Review
+
+### 2026-10-20
+
+**Code review complete.** 0 `decision-needed`, 1 `patch`, 0 `defer`, 0 rejected.
+
+- [x] [Review][Patch] Arquivos `.env` em subdiretórios podem entrar no contexto e na imagem Docker [`.dockerignore`:8] — exige `**/.env*` e cobre a regra limitada à raiz no teste do preflight.
+
+Rejected: none.

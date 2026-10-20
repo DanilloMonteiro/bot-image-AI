@@ -5,11 +5,21 @@ import { handlePlatformSmokeJob } from './platform-smoke-handler.js';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function safeErrorDetails(error: unknown): { errorName: string; errorCode?: string } {
+  const value = typeof error === 'object' && error !== null
+    ? error as { name?: unknown; code?: unknown }
+    : undefined;
+  return {
+    errorName: typeof value?.name === 'string' ? value.name : 'UnknownError',
+    ...(typeof value?.code === 'string' ? { errorCode: value.code } : {}),
+  };
+}
+
 async function main(): Promise<void> {
   await ensureReady();
   const smoke = new PlatformSmoke(new PostgresSmokeRepository());
   const boss = getBoss();
-  boss.on('error', () => console.error('queue_error'));
+  boss.on('error', (error) => console.error('queue_error', safeErrorDetails(error)));
   await boss.work(SMOKE_QUEUE, async (jobs) => {
     for (const job of jobs) {
       const data = job.data as { correlationId?: unknown; kind?: unknown };
@@ -37,4 +47,7 @@ async function main(): Promise<void> {
   }
 }
 
-void main().catch(() => { console.error('worker_start_failed'); process.exit(1); });
+void main().catch((error: unknown) => {
+  console.error('worker_start_failed', safeErrorDetails(error));
+  process.exit(1);
+});

@@ -7,8 +7,24 @@ export const SMOKE_QUEUE = 'platform-smoke';
 
 function databaseUrl(): string {
   const url = process.env.DATABASE_URL;
-  if (!url) throw new Error('DATABASE_URL is required');
-  return url;
+  if (url) return url;
+
+  const host = process.env.DATABASE_HOST;
+  const port = process.env.DATABASE_PORT ?? '5432';
+  const name = process.env.DATABASE_NAME;
+  const user = process.env.DATABASE_USER;
+  const password = process.env.DATABASE_PASSWORD;
+  if (!host || !name || !user || password === undefined) {
+    throw new Error('DATABASE_URL or database connection settings are required');
+  }
+
+  const connection = new URL('postgresql://localhost');
+  connection.hostname = host;
+  connection.port = port;
+  connection.pathname = `/${name}`;
+  connection.username = user;
+  connection.password = password;
+  return connection.toString();
 }
 
 let pool: Pool | undefined;
@@ -16,7 +32,17 @@ let boss: PgBoss | undefined;
 let ready: Promise<void> | undefined;
 
 function getPool(): Pool {
-  pool ??= new Pool({ connectionString: databaseUrl(), connectionTimeoutMillis: 3000 });
+  if (!pool) {
+    const nextPool = new Pool({ connectionString: databaseUrl(), connectionTimeoutMillis: 3000 });
+    nextPool.on('error', (error: Error) => {
+      const code = 'code' in error && typeof error.code === 'string' ? error.code : undefined;
+      console.error('postgres_pool_error', {
+        errorName: error.name,
+        ...(code ? { errorCode: code } : {}),
+      });
+    });
+    pool = nextPool;
+  }
   return pool;
 }
 

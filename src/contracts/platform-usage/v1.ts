@@ -63,10 +63,15 @@ function hasOnlyKeys(value: Record<string, unknown>, allowed: readonly string[])
   return Object.keys(value).every((key) => allowed.includes(key));
 }
 
+function hasOwnKeys(value: Record<string, unknown>, required: readonly string[]): boolean {
+  return required.every((key) => Object.hasOwn(value, key));
+}
+
 /** Validates an interchange record without adding defaults or turning unknown cost into zero. */
 export function isPlatformUsageRecordV1(value: unknown): value is PlatformUsageRecordV1 {
   if (!isObject(value)
     || !hasOnlyKeys(value, ['version', 'resource', 'metric', 'quantity', 'unit', 'period', 'origin', 'cost'])
+    || !hasOwnKeys(value, ['version', 'resource', 'metric', 'quantity', 'unit', 'period', 'origin'])
     || value.version !== PLATFORM_USAGE_CONTRACT_VERSION
     || typeof value.resource !== 'string'
     || !RESOURCE_SET.has(value.resource)
@@ -82,13 +87,17 @@ export function isPlatformUsageRecordV1(value: unknown): value is PlatformUsageR
     || !ORIGIN_SET.has(value.origin)
     || !isObject(value.period)
     || !hasOnlyKeys(value.period, ['from', 'to'])
+    || !hasOwnKeys(value.period, ['from', 'to'])
     || !isCalendarDate(value.period.from)
     || !isCalendarDate(value.period.to)
     || value.period.from >= value.period.to) return false;
 
+  if ('cost' in value && !Object.hasOwn(value, 'cost')) return false;
+
   if (Object.hasOwn(value, 'cost')) {
     if (!isObject(value.cost)
       || !hasOnlyKeys(value.cost, ['amountMinor', 'currency'])
+      || !hasOwnKeys(value.cost, ['amountMinor', 'currency'])
       || typeof value.cost.amountMinor !== 'number'
       || !Number.isSafeInteger(value.cost.amountMinor)
       || value.cost.amountMinor < 0

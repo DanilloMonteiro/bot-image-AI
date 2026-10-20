@@ -12,9 +12,11 @@ async function main(): Promise<void> {
   boss.on('error', () => console.error('queue_error'));
   await boss.work(SMOKE_QUEUE, async (jobs) => {
     for (const job of jobs) {
-      const data = job.data as { correlationId?: unknown; kind?: unknown };
-      const id = data.correlationId;
-      if (typeof id !== 'string' || !UUID_PATTERN.test(id) || data.kind !== 'synthetic') throw new Error('invalid_job');
+      const data: unknown = job.data;
+      if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('invalid_job');
+      const jobData = data as { correlationId?: unknown; kind?: unknown };
+      const id = jobData.correlationId;
+      if (typeof id !== 'string' || !UUID_PATTERN.test(id) || jobData.kind !== 'synthetic') throw new Error('invalid_job');
       const testMode = process.env.STAGING_SMOKE_TEST_MODE === '1';
       const failUntilAttempt = testMode
         ? Number(process.env.STAGING_SMOKE_TEST_FAIL_UNTIL_ATTEMPT ?? 0)

@@ -1,16 +1,5 @@
 import type { SmokeState } from '../../modules/platform-smoke/repository.js';
-
-type EventBase = {
-  correlationId: string;
-  attemptNumber: number;
-  occurredAt: string;
-};
-
-export type PlatformEvent =
-  | (EventBase & { type: 'smoke_started'; state: 'processing' })
-  | (EventBase & { type: 'smoke_attempt_failed'; state: 'processing' | 'unknown'; errorCode: 'attempt_failed' })
-  | (EventBase & { type: 'smoke_completed'; state: 'completed' })
-  | (EventBase & { type: 'infrastructure_error'; state: 'unknown'; errorCode: 'infrastructure_error' });
+import type { PlatformEvent } from '../../modules/platform-smoke/events.js';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EVENT_TYPES = new Set<PlatformEvent['type']>([

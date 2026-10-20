@@ -381,6 +381,23 @@ test('platform usage v1 records manual period and unknown cost without convertin
   }), true);
 });
 
+test('platform usage v1 rejects inherited required fields and inherited cost', () => {
+  const record = {
+    version: 'v1',
+    resource: 'hosting',
+    metric: 'reported_usage',
+    quantity: 12.5,
+    unit: 'provider_units',
+    period: { from: '2026-10-01', to: '2026-11-01' },
+    origin: 'manual_reconciliation',
+  };
+
+  assert.equal(isPlatformUsageRecordV1(Object.create(record)), false);
+  assert.equal(isPlatformUsageRecordV1(Object.assign(Object.create({
+    cost: { amountMinor: 0, currency: 'BRL' },
+  }), record)), false);
+});
+
 test('platform usage v1 rejects impossible periods and malformed costs', () => {
   const record = {
     version: 'v1',

@@ -11,5 +11,5 @@
     "rootDir": "src",
     "types": ["node"]
   },
-  "include": ["src/worker/**/*.ts", "src/modules/**/*.ts", "src/adapters/**/*.ts"]
+  "include": ["src/worker/**/*.ts", "src/modules/**/*.ts", "src/adapters/**/*.ts", "src/contracts/**/*.ts"]
 }

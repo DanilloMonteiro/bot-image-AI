@@ -38,7 +38,10 @@ test('database exposure, public web binding, missing env exclusions, and cache g
   });
 
   await t.test('root-only Docker env exclusion', () => {
-    const config = { ...baseline, dockerignore: baseline.dockerignore.replace('**/.env*\n', '.env*\n') };
+    const config = {
+      ...baseline,
+      dockerignore: baseline.dockerignore.replace(/^\*\*\/\.env\*\r?$/m, '.env*'),
+    };
     assert.match(validatePlatformIsolation(config).join('\n'), /exclude \.env files and variants/);
   });
 

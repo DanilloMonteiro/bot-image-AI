@@ -51,3 +51,11 @@ I re-read the current stack and Deferred entries and checked the official releas
 - **Greenfield defaults are accurate and need no architecture change.** Current create-next-app --yes docs list TypeScript, Tailwind CSS, ESLint, App Router, Turbopack, @/*, and AGENTS.md. The spine defers bootstrap details to implementation, so it does not need to adopt those defaults now; implementation should retain the stated TypeScript 6.0.3 baseline in the manifest/lockfile.
 
 **Final verdict:** the current spine reflects the latest primary-source verification. PostgreSQL and pg-boss remain clearly marked as candidates; no remaining version/default issue is flagged.
+
+## Follow-up after platform story 1.6 (2026-10-20)
+
+Story 1.6 updates `package.json` and `package-lock.json` to pin Next.js 16.4.1. The dated 2026-10-09 assessment above records the architecture spine at 16.4.0 at that time; it no longer describes the application package after story 1.6.
+
+As of 2026-10-20, the official release list marks Next.js 16.4.2 as the latest stable release. The repository pin is 16.4.1, so this note does not describe that pin as latest and does not change the selected dependency version. [Next.js 16.4.2 release notes](https://github.com/vercel/next.js/releases/tag/v16.4.2)
+
+**Disposition:** the stale repository-version statement deferred by story 1.6 is resolved. Railway production apply, provider alerting, and provider backup/restore remain separate operational gates; this review does not claim they were verified.

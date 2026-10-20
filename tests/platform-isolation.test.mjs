@@ -37,8 +37,8 @@ test('database exposure, public web binding, missing env exclusions, and cache g
     assert.match(validatePlatformIsolation(config).join('\n'), /web host port must bind to 127\.0\.0\.1/);
   });
 
-  await t.test('Docker build env exclusion', () => {
-    const config = { ...baseline, dockerignore: baseline.dockerignore.replace('.env*\n', '') };
+  await t.test('root-only Docker env exclusion', () => {
+    const config = { ...baseline, dockerignore: baseline.dockerignore.replace('**/.env*\n', '.env*\n') };
     assert.match(validatePlatformIsolation(config).join('\n'), /exclude \.env files and variants/);
   });
 

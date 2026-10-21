@@ -3,14 +3,14 @@ title: "Backups do estado durável podem ser restaurados"
 type: "feature"
 ticket: 5
 created: "2026-10-20"
-status: "in-progress"
+status: "built"
 baseline_revision: "3b940b833ead"
 route: "full"
 route_source: "auto"
 risk: "medium"
-review: "none"
-review_source: "auto"
-lenses_ran: []
+review: "quick"
+review_source: "pinned"
+lenses_ran: ["quick"]
 review_loop_iteration: 0
 context:
   - "{project-root}/docs/platform-staging.md"
@@ -62,11 +62,15 @@ context:
 ## Implementation Notes
 
 - The local command uses two unique Compose projects and separate ephemeral credentials; external provider setup remains pending approval.
-- Static JavaScript and package JSON parsing passed; the Docker restore flow was not executed.
+- Static JavaScript and package JSON parsing passed. `npm run backup:restore:local` passed locally on 2026-10-21, exercising the synthetic dump, isolated restore, and worker completion path. No external provider or production backup behavior was exercised.
 
 ## Plan Change Log
 
+- 2026-10-21: Recorded the successful local synthetic backup and restore acceptance run; external provider backup remains pending owner approval.
+
 ## Review Triage Log
+
+- 2026-10-21 — `false` / rejected: Architecture decision AD-8 adopts Railway and the Virginia/IAD regions. The production graph is explicitly unapplied, and provider backup/restore remains unverified pending owner operations approval; this story's local exercise does not configure or claim external backups. See `architecture-ensaios-ia-whatsapp.md:71-75`, `docs/platform-staging.md:3,13,35,39-41`, and the 1.6 plan's provider-verification note.
 
 ## Design Notes
 
@@ -96,5 +100,5 @@ Code review complete. 0 decision-needed, 6 patch, 0 defer, 3 rejected.
 #### Rejected
 
 - `false` — The pg-boss expiration starts after a job becomes active; the restored job is queued while the source worker is stopped, so a slow backup or restore does not consume its 30-second active-job limit.
-- `false` — The plan remains `in-progress` and explicitly says the Docker restore flow was not executed. Its checked tasks describe implementation work, so they do not claim that the acceptance flow was verified.
+- `false` — At the time of the 2026-10-20 review, the plan was `in-progress` and the Docker restore flow had not run. That state was resolved by the local acceptance run recorded above.
 - `low` — SIGINT/SIGTERM can bypass `finally`, but this requires an uncommon interruption and needs additional signal-handling control flow for a local synthetic-data command; the resulting orphaned temporary project can be removed manually.

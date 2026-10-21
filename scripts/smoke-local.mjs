@@ -88,6 +88,28 @@ function checkPostgresAttemptGuard() {
     env, input: source, encoding: 'utf8',
   }).trim();
 }
+function exerciseStaleAttemptFence(id) {
+  const program = `const { PostgresSmokeRepository, getBoss } = require('./dist/adapters/postgres/smoke-repository.js');
+(async () => {
+  let exitCode = 0;
+  try {
+    const repository = new PostgresSmokeRepository();
+    if (!(await repository.markProcessing('${id}', 1))) throw new Error('new_attempt_not_started');
+    await repository.markAttemptFailed('${id}', 0);
+    const task = await repository.find('${id}');
+    if (task?.state !== 'processing' || task.errorCode !== null) throw new Error('stale_failure_overwrote_current_attempt');
+  } catch (error) {
+    console.error(error);
+    exitCode = 1;
+  } finally {
+    try { await getBoss().stop(); } catch {}
+    process.stdout.write(exitCode === 0 ? 'attempt_fence_ok\\n' : 'attempt_fence_failed\\n', () => process.exit(exitCode));
+  }
+})();`;
+  return execFileSync('docker', ['compose', '-p', project, 'exec', '-T', 'web', 'node', '-e', program], {
+    env, encoding: 'utf8',
+  }).trim();
+}
 async function taskState(id) {
   const response = await request(`${base}/${id}`, { headers: auth });
   if (response?.status !== 200) return null;
@@ -157,6 +179,14 @@ try {
   const recoveredWorkerLogs = composeOutput('logs', '--no-color', 'worker');
   assert(hasPlatformEvent(recoveredWorkerLogs, 'smoke_completed', failedTask.id, recoveredTerminal.attemptNumber, 'completed'), 'recovered task must emit a correlated completion event from the real worker');
 
+  compose('stop', 'worker');
+  const fenceResponse = await request(base, { method: 'POST', headers: auth });
+  assert(fenceResponse?.status === 202, 'attempt-fence task must be accepted');
+  const fenceTask = await fenceResponse.json();
+  assert(exerciseStaleAttemptFence(fenceTask.id).includes('attempt_fence_ok'), 'stale attempt failure must not alter a newer processing attempt');
+  const fencedTask = await taskState(fenceTask.id);
+  assert(fencedTask?.state === 'processing' && fencedTask.errorCode === null, 'newer processing attempt must keep its own status');
+
   compose('stop', 'db');
   await waitFor(() => {
     try { return workerHealthStatus() === '503'; } catch { return false; }
@@ -164,7 +194,7 @@ try {
   const unavailable = await request(base, { method: 'POST', headers: auth });
   assert(unavailable?.status === 503, 'database loss must return 503');
   assert(!(await unavailable.json()).id, 'failed POST must not return an accepted ID');
-  console.log(`Smoke passed: PostgreSQL attempt guard; ${task.id} recovered after a crash following commit without duplicating its effect; ${failedTask.id} emitted failure/completion events and recovered with one effect; auth and database failure checked.`);
+  console.log(`Smoke passed: PostgreSQL attempt guard; ${task.id} recovered after a crash following commit without duplicating its effect; ${failedTask.id} emitted failure/completion events and recovered with one effect; stale-attempt fencing, auth and database failure checked.`);
 } finally {
   if (cleanupNeeded) compose('down', '-v');
 }

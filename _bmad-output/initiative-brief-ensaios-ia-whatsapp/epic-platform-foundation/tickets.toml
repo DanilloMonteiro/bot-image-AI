@@ -51,6 +51,7 @@ description = "Configura e documenta o backup do estado durável no provedor apr
 verify = "Uma cópia sintética do estado de teste é restaurada em ambiente isolado, e a tarefa restaurada pode ser consultada e processada pelo smoke path."
 covers = ["F4"]
 after = [3]
+assignee = "Danillo"
 hitl = false
 risk = "medium"
 

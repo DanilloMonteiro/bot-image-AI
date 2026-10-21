@@ -4,6 +4,7 @@ type: "feature"
 ticket: 5
 created: "2026-10-20"
 status: "in-progress"
+assignee: "Danillo"
 baseline_revision: "3b940b833ead"
 route: "full"
 route_source: "auto"

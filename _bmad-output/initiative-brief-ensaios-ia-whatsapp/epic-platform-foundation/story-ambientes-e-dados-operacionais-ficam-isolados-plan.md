@@ -3,7 +3,7 @@ title: 'Ambientes e dados operacionais ficam isolados'
 type: 'feature'
 ticket: '3'
 created: '2026-10-19'
-status: 'built'
+status: done
 baseline_revision: 'ccedbea2e49036817566b3b2b4582fba2e635839'
 route: 'full'
 route_source: 'auto'

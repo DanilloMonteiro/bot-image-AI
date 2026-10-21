@@ -3,6 +3,7 @@ title: "Backups do estado durável podem ser restaurados"
 type: "feature"
 ticket: 5
 created: "2026-10-20"
+assignee: "Danillo"
 status: done
 baseline_revision: "3b940b833ead"
 route: "full"

@@ -12,7 +12,7 @@ risk: high
 
 ## Description
 
-Permitir que os sócios operem dentro do teto total de R$500 e aprovem a política efetiva de tratamento de dados antes de qualquer coleta ou processamento de foto. O épico cobre o ledger e guardrails econômicos, além da decisão e apresentação da política por fornecedor e tipo de dado.
+Permitir que os sócios operem dentro do teto total de R$500 e aprovem a política efetiva de tratamento de dados antes de qualquer coleta ou processamento de foto. O épico entrega o ledger e os guardrails econômicos, além do inventário e da versão aprovada da política que será consumida pelos épicos de Conversas, Retratos e Operações.
 
 ## Outcome
 
@@ -22,13 +22,14 @@ Cada operação com custo é autorizada somente quando seu custo cabe no saldo c
 
 1. O ledger registra gastos realizados, comprometidos, reservados e ainda não faturados, incluindo anúncios e operação, e calcula o saldo contra R$500 e os limites aprovados por categoria: R$220 anúncios, R$110 IA, R$65 Railway (app/worker/PostgreSQL/Bucket/egress/backups), R$25 domínio/acessórios e R$80 reserva Meta/Pix/câmbio/retentativas.
 2. A operação com custo é recusada quando o custo ou o saldo é desconhecido ou insuficiente; reservas e liberações repetidas não duplicam valores.
-3. Provedores e tratamentos de foto original, resultados, conversa/consentimento, backups e cópias externas foram avaliados e a política aprovada informa finalidade, acesso, retenção, exclusão e exceções.
-4. A jornada de produção pode exibir a versão aprovada da política antes da coleta; sem aprovação ou informação registrada, o sistema bloqueia a coleta e o processamento.
-5. Os sócios consultam conciliação e margem com hipóteses claramente marcadas, sem anunciar os preços de teste como valores finais.
+3. Provedores e tratamentos de foto original, resultados, conversa/consentimento, backups e cópias externas foram avaliados e a política versionada informa finalidade, acesso, retenção, exclusão e exceções.
+4. A versão aprovada e seus requisitos de apresentação/gate estão disponíveis ao épico de Conversas; ele apresenta a política antes da coleta e bloqueia coleta/processamento enquanto faltar aprovação ou informação.
+5. O Budget expõe custos reconciliados, saldo e dados necessários à avaliação de margem para Operações, mantendo hipóteses claramente marcadas e sem anunciar preços de teste como valores finais.
+6. O tracer sintético de aplicação e worker está implantado e validado em produção após a aceitação da Base de Plataforma, sem dados pessoais, tráfego real de WhatsApp ou operações reais de custo.
 
 ## Boundaries
 
-Épico dono do ledger do piloto, orçamento/reservas e gate de política de dados. Não implementa o fluxo conversacional, a interface geral do painel, pagamentos Pix ou pipeline de imagem. O provedor de login e fornecedores seguem decisões externas a este épico quando a escolha exigir validação de custo e privacidade.
+Épico dono do módulo Budget, do ledger/reservas/reconciliação, do snapshot autoritativo e do inventário e aprovação da política de dados. A Base de Plataforma é dona da aplicação/worker, CI, implantação, backups e operação do provedor. Conversas apresenta a política e coleta consentimento; Retratos aplica a política ao ciclo de vida das imagens; Operações é dona da interface e das ações dos sócios. Este épico não implementa conversas, interface geral, pagamentos Pix ou pipeline de imagem.
 
 ## References
 
@@ -46,3 +47,7 @@ Cada operação com custo é autorizada somente quando seu custo cabe no saldo c
 - Open question: validar margem antes de fixar preços. R$19,90/R$39,90/R$59,90 são hipóteses de teste, não preços aprovados.
 - Open gate: não processar foto real até a política de dados, criptografia adequada, exclusão/retenção e tratamento de cópias terem sido validados.
 - Decision: saldo/custo desconhecido ou insuficiente bloqueia novo gasto até reconciliação; a liberação de reserva é auditada e pode ser feita por qualquer um dos dois sócios administradores depois de terminalidade e conciliação.
+- Decision (2026-10-21): o candidato `epic-base-segura-custos` foi integrado neste épico oficial. A história candidata de endurecimento genérico de CI/ambiente/backup foi absorvida pela Base de Plataforma (histórias 1.5 e 1.6), evitando duplicar sua propriedade; o tracer de produção permanece condicionado à 1.6 e à conexão do workspace Railway.
+- Decision (2026-10-21): o primeiro tracer do Budget será local e sintético; o tracer em produção depende da entrega 1.6 e do acesso ao Railway. O épico oficial permanece depois da Base de Plataforma, portanto nenhuma história deste épico começa até essa base ser aceita.
+- Decision (2026-10-21): Conversas é responsável por apresentar a versão aprovada e bloquear a coleta sem ela; Retratos é responsável por executar retenção/exclusão nos dados de imagem; este épico fornece o inventário e a política aprovados.
+- Open gate (2026-10-21): o workspace Railway ainda não está conectado; não executar tracer ou validação de produção até o acesso ser provisionado e as aprovações de operação registradas. Manter somente dados sintéticos. A história 1.5 da Base de Plataforma ainda aparece como `in-progress`.

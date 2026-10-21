@@ -3,7 +3,7 @@ title: 'Tarefas duráveis retomam sem duplicar efeitos'
 type: 'feature'
 ticket: '2'
 created: '2026-10-15'
-status: 'built'
+status: done
 baseline_revision: '63e11af76c74331b8731eb8e7547ebd455e8f09f'
 route: 'full'
 route_source: 'auto'

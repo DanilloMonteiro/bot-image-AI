@@ -39,6 +39,11 @@ Cada operação com custo é autorizada somente quando seu custo cabe no saldo c
 
 ## Notes
 
+- Source conflict: `initiative-brief-ensaios-ia-whatsapp.md` ainda informa que infraestrutura, regiões, limites e provedores não foram aprovados; decisões datadas de 2026-10-20 na spec, no addendum do PRD, na arquitetura e neste épico aprovam Railway, regiões e tetos por categoria. Para esses itens, prevalecem as decisões datadas; isso não aprova provedores externos de WhatsApp/Pix/IA nem os tratamentos de dados, retenção, exclusão, transferência e exceções, que continuam abertos.
+- Handoff de política: a story 2.2 entrega a política aprovada e versionada e o contrato de decisão fechado por padrão; o Epic 3 exibe a política e registra consentimento, e o Epic 6 revalida política e consentimento antes do processamento de imagens. O Epic 2 não entrega a interface conversacional.
+- Decision (2026-10-21): o breakdown do Epic 2 tem nove stories; o tracer sintético vem primeiro, a política de dados tem uma story HITL própria, CI/isolamento/backup/deploy permanecem na fundação, e o épico fecha com refactor sweep e E2E restritos aos módulos Budget e Data Policy.
+- Decision (2026-10-21): o candidato `epic-base-segura-custos` foi reconciliado com este épico oficial; seu conteúdo original foi arquivado para manter o histórico, e sua story duplicada de CI/controles não faz parte do escopo ativo.
+
 - Decision (2026-10-20): os tetos acima autorizam gastos até R$500 no piloto; emitir alertas em 60/80/95% do total e da categoria, falhar fechado com custo/saldo desconhecido, reconciliar cobranças externas/não faturadas e não transferir saldo entre categorias automaticamente.
 - Decision (2026-10-20): Isaac e seu sócio são as únicas contas administradoras do painel, com contas individuais, MFA e auditoria. Qualquer um pode pausar gastos e liberar uma reserva após estado terminal e conciliação.
 - Decision (2026-10-20): Railway foi escolhida para app, worker e PostgreSQL; Railway Bucket privado em IAD foi escolhido para objetos. Serviços em US East/Virgínia. O preço da plataforma é medido em USD e a localização dos objetos é EUA; configurar limites e reconciliar câmbio/egress dentro dos tetos em BRL.

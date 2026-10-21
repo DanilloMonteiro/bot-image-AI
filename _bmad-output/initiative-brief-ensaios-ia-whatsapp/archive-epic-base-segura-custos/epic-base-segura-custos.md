@@ -51,6 +51,8 @@ Os demais domínios conseguem integrar-se por casos públicos e operar um fluxo 
 
 ## Notes
 
+- Archive notice (2026-10-21): este candidato foi reconciliado no Epic 2 oficial `../epic-pilot-budget-data-policy/`; o diretório foi preservado como histórico e não representa trabalho ativo. A story de CI/controles foi excluída do breakdown ativo por duplicar escopo da fundação.
+
 - Decision (2026-10-20): Railway foi escolhida para app, worker e PostgreSQL; pg-boss usa PostgreSQL sem Redis; objetos usam Railway Bucket privado. Serviços em US East/Virgínia e Bucket em IAD. Os tetos de custo por categoria foram aprovados e estão em AD-6/PRD; as duas contas individuais de Isaac e seu sócio são admins com MFA e auditoria.
 - Sequence gate: este épico não está listado no índice oficial `../tickets.toml`. O épico oficial Orçamento do piloto e política de dados (ID 2) vem depois de `epic-platform-foundation`; a história 1.5 (restauração de backup) e a 1.6 (implantação de app/worker em produção) pertencem à base de plataforma. Não provisionar nem executar tracer em produção antes de 1.6. Harmonizar o ticket candidato e suas dependências pelo fluxo de tickets antes de iniciar este épico.
 - A implantação e o tracer usam somente dados sintéticos, sem WhatsApp real nem fotos. Manter a base enquanto épicos dependentes a utilizarem; após aceite, remover fixtures sintéticas e conservar evidência operacional não pessoal.

@@ -3,7 +3,7 @@ title: "Falhas e uso de plataforma ficam observáveis"
 type: feature
 ticket: 4
 created: '2026-10-20'
-status: built
+status: done
 assignee: "Isaac"
 baseline_revision: 'f2db8a3dd45e3097eb1e8368f71abdc0261412ee'
 route: oneshot

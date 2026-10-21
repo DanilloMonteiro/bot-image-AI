@@ -3,7 +3,7 @@ title: 'Caminho durável do Next.js ao worker em staging'
 type: 'feature'
 ticket: '1'
 created: '2026-10-15'
-status: 'built'
+status: done
 baseline_revision: 'ca814bec464be2abff75d68f5d2fce4cab52fee2'
 route: 'full'
 route_source: 'auto'

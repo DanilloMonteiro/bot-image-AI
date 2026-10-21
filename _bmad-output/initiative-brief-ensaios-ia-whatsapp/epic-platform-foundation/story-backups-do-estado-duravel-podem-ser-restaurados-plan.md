@@ -3,14 +3,14 @@ title: "Backups do estado durável podem ser restaurados"
 type: "feature"
 ticket: 5
 created: "2026-10-20"
-status: "in-progress"
+status: done
 baseline_revision: "3b940b833ead"
 route: "full"
 route_source: "auto"
 risk: "medium"
-review: "none"
-review_source: "auto"
-lenses_ran: []
+review: 'quick'
+review_source: "pinned"
+lenses_ran: ['quick']
 review_loop_iteration: 0
 context:
   - "{project-root}/docs/platform-staging.md"
@@ -56,13 +56,14 @@ context:
 
 **Acceptance Criteria:**
 - Given Docker local disponível, when o comando conclui, then a tarefa sintética restaurada é consultável pelo mesmo UUID e processada no ambiente isolado com exatamente um efeito.
+- Given a restauração terminou no destino, when o worker de destino conclui a tarefa, then a origem permanece queued com o job preservado e sem efeito aplicado.
 - Given falha em qualquer fase, when o comando encerra, then retorna erro, remove o dump temporário e limpa apenas seus projetos/volumes Compose.
 - Given nenhum provedor externo aprovado, when a documentação descreve o resultado, then não afirma configuração de backup externo nem define RTO, RPO ou retenção.
 
 ## Implementation Notes
 
 - The local command uses two unique Compose projects and separate ephemeral credentials; external provider setup remains pending approval.
-- Static JavaScript and package JSON parsing passed; the Docker restore flow was not executed.
+- O fluxo de restore foi executado localmente; a origem permaneceu queued com o job presente e sem efeito após a conclusão isolada no destino.
 
 ## Plan Change Log
 
@@ -98,3 +99,11 @@ Code review complete. 0 decision-needed, 6 patch, 0 defer, 3 rejected.
 - `false` — The pg-boss expiration starts after a job becomes active; the restored job is queued while the source worker is stopped, so a slow backup or restore does not consume its 30-second active-job limit.
 - `false` — The plan remains `in-progress` and explicitly says the Docker restore flow was not executed. Its checked tasks describe implementation work, so they do not claim that the acceptance flow was verified.
 - `low` — SIGINT/SIGTERM can bypass `finally`, but this requires an uncommon interruption and needs additional signal-handling control flow for a local synthetic-data command; the resulting orphaned temporary project can be removed manually.
+
+### 2026-10-21
+
+Code review complete. 0 decision-needed, 0 patch, 0 defer, 0 rejected.
+
+#### Rejected
+
+None.

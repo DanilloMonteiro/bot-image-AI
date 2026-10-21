@@ -152,6 +152,8 @@ export class PostgresSmokeRepository implements SmokeRepository {
           [id, job.retryCount],
         );
         if (failed.rows[0]) return toTask(failed.rows[0]);
+        const current = await getPool().query('SELECT * FROM platform_smoke_tasks WHERE id = $1', [id]);
+        return current.rows[0] ? toTask(current.rows[0]) : null;
       }
     }
     return toTask(result.rows[0]);

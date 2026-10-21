@@ -12,7 +12,7 @@ risk: high
 
 ## Description
 
-Criar a fundação greenfield para o monólito modular em TypeScript, com aplicação Next.js e worker no mesmo código-base, fronteiras de módulo e ambiente operacional suficiente para entregar os demais épicos em produção. Hospedagem, banco e fila seguem em aberto até validação de custo e privacidade.
+Criar a fundação greenfield para o monólito modular em TypeScript, com aplicação Next.js e worker no mesmo código-base, fronteiras de módulo e ambiente operacional suficiente para entregar os demais épicos em produção. Railway para aplicação/worker, PostgreSQL com pg-boss e Railway Bucket privado em IAD foram escolhidos; a conta e a configuração efetivas ainda aguardam validação de custo, backup/restauração e privacidade antes da ativação.
 
 ## Outcome
 
@@ -37,7 +37,7 @@ Os demais owners conseguem entregar capacidades no mesmo produto com execução 
 
 ## Boundaries
 
-Épico de plataforma: scaffold, execução web/worker, deploy, CI, segredos, observabilidade, backups e recuperação. Não escolhe hospedagem nem provedor de dados por conveniência; não implementa regras de Conversas, Pedido, Retrato, Operação ou Orçamento. Consulte os não-objetivos da spec.
+Épico de plataforma: scaffold, execução web/worker, deploy, CI, segredos, observabilidade, backups e recuperação. Mantém as escolhas registradas de Railway, PostgreSQL/pg-boss e Bucket e valida sua configuração efetiva; não as altera por conveniência nem implementa regras de Conversas, Pedido, Retrato, Operação ou Orçamento. Consulte os não-objetivos da spec.
 
 ## References
 
@@ -48,7 +48,7 @@ Os demais owners conseguem entregar capacidades no mesmo produto com execução 
 ## Notes
 
 - Decision: monólito modular, TypeScript, Next.js mais worker no mesmo código-base e propriedade dos dados por módulo foram confirmados pelo usuário.
-- Open question: provedor de hospedagem, banco e fila; validar custo total, backup, segurança e privacidade antes da ativação.
-- Source conflict: o plano fonte propõe Fastify, PostgreSQL/Drizzle, pg-boss e Railway/Lightsail; a decisão confirmada fixa Next.js e worker no mesmo código-base, mas deixa hospedagem, persistência e fila abertas.
-- Decision: 2026-10-14 — o tracer é o caminho durável do Next.js ao worker em staging; a hospedagem, o banco e a fila ficam como decisão HITL da primeira história após validação de custo e privacidade.
+- Open question: o workspace Railway ainda não está conectado; validar conta, custo medido, configuração, backup/restauração, segurança e privacidade antes da ativação de tráfego e dados reais.
+- Source conflict: o plano fonte propõe Fastify, Drizzle e Railway/Lightsail. A decisão vigente fixa Next.js e worker no mesmo código-base, PostgreSQL com pg-boss, Railway para app/worker e Railway Bucket privado em IAD; falta validar a configuração efetiva e os termos/custos do provedor.
+- Decision: 2026-10-21 — Railway, PostgreSQL/pg-boss e Railway Bucket privado em IAD foram escolhidos. A conexão do workspace e as verificações de produção permanecem pendentes; histórias que exigem produção aguardam acesso autorizado e a conclusão da base.
 - Decision: 2026-10-14 — observabilidade e backup/restauração podem avançar em paralelo após isolamento dos ambientes; deploy de produção espera ambos; o Refactor sweep fecha o épico.

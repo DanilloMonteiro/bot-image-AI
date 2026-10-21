@@ -8,9 +8,11 @@ description = "Reutiliza a aplicação, o worker e o fluxo durável do Epic 1 pa
 verify = "No ambiente de produção sintético, repetir o mesmo evento cria um único job durável e uma única reserva mínima, sem acessar rotas de cliente ou mídia."
 covers = ["CAP-7"]
 after = ["1.6"]
+unknown = "O workspace Railway ainda não está conectado; confirmar acesso, autorização e configuração efetiva antes de validar a implantação em produção."
 hitl = true
 risk = "high"
 references = ["../architecture-ensaios-ia-whatsapp/architecture-ensaios-ia-whatsapp.md#ad-3", "../architecture-ensaios-ia-whatsapp/architecture-ensaios-ia-whatsapp.md#ad-6", "../architecture-ensaios-ia-whatsapp/architecture-ensaios-ia-whatsapp.md#ad-8"]
+notes = ["Verificação externa: conferir acesso ao workspace Railway, HTTPS, app/worker e custo estimado de hospedagem; manter dados pessoais e tráfego real desativados."]
 
 [[entry]]
 id = 2

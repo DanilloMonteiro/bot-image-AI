@@ -9,7 +9,7 @@ id = 2
 slug = "epic-pilot-budget-data-policy"
 title = "Orçamento do piloto e política de dados"
 covers = ["CAP-7", "CAP-2"]
-after = [{ epic = 1, needs = "ambiente de produção, worker, observabilidade e integração mínima para controlar custos e políticas" }]
+after = [{ epic = 1, needs = "base de plataforma aceita, incluindo restauração e implantação em produção antes do tracer de orçamento" }]
 
 [[epic]]
 id = 3

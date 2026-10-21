@@ -88,3 +88,22 @@ A fila pode entregar um job novamente quando uma execução expira ou falha. A p
 - `npm test` — build e testes unitários passam, incluindo duplicatas, falhas e recuperação.
 - `npm run check:boundaries` — fronteiras de persistência dos módulos continuam respeitadas.
 - `npm run smoke:local` — PostgreSQL e worker reproduzem a queda/reinício e a falha terminal; cada chave tem um único efeito comprometido.
+
+## Code Review
+
+### 2026-10-19
+
+**Code review complete.** 0 `decision-needed`, 2 `patch`, 0 `defer`, 8 `rejected`.
+
+- [x] [Review][Patch] Reler a tarefa depois de uma corrida na reconciliação de estado terminal [src/adapters/postgres/smoke-repository.ts:139] — resolvido relendo o estado atual quando a atualização terminal concorrente não retorna linha.
+- [x] [Review][Patch] Cobrir no smoke PostgreSQL a falha atrasada de uma tentativa antiga durante uma tentativa nova em processamento [scripts/smoke-local.mjs:112] — resolvido com um exercício da implementação PostgreSQL que verifica que a falha antiga não altera `errorCode`.
+
+Rejected:
+- `blind-hunter 1` — `false`: a recuperação documentada consulta primeiro o estado terminal; esse GET reconcilia o job falho com a tarefa. Antes da reconciliação, o registro da tarefa ainda não está elegível para retry e o 409 segue o contrato de estado ativo/não terminal.
+- `blind-hunter 2` — `false`: com pg-boss 12.37.1, retry preserva o contador atual e a próxima claim incrementa `retry_count` porque `started_on` permanece definido; o valor recebido pelo worker corresponde ao `attempt_number` salvo.
+- `blind-hunter 3` — `false`: embora o fake não derive o contador da fila, o smoke local e o workflow CI exercitam a recuperação com PostgreSQL/pg-boss real e aguardam o job concluído com um único efeito.
+- `blind-hunter 4` — `false`: o pg-boss conclui a claim usando o `retryCount` da entrega e uma condição de fencing; o retorno antigo não consegue confirmar a claim mais nova.
+- `blind-hunter 5` — `false`: o smoke local mata o worker após o commit e verifica a redelivery real, o job concluído e exatamente um efeito persistido.
+- `blind-hunter 6` — `low`: o fake não simula rollback entre as escritas, mas a implementação grava ambas na mesma transação PostgreSQL e executa rollback em erro. Um teste que injete falha entre as instruções exigiria instrumentação adicional para um caminho excepcional já protegido pela transação.
+- `blind-hunter 7` — `false`: o plano está em UTF-8 válido; a aparência de texto corrompido vinha da leitura com a codificação padrão do PowerShell.
+- `edge-case 1` — `false`: mesmo caso do `blind-hunter 1`; após o GET reconciliar o job falho, a rota de retry aceita a recuperação, como demonstrado pelo smoke local.

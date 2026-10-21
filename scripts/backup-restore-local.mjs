@@ -92,6 +92,21 @@ async function taskState(runtime, id) {
   return response.json();
 }
 
+function sourceTaskAndJobState(id) {
+  const sql = "SELECT (SELECT state::text FROM platform_smoke_tasks WHERE id = '"
+    + id
+    + "'::uuid) || ':' || (SELECT count(*)::text FROM pgboss.job WHERE name = 'platform-smoke' AND id = '"
+    + id
+    + "'::uuid) || ':' || (SELECT count(*)::text FROM platform_smoke_effects WHERE id = '"
+    + id
+    + "'::uuid)";
+  return composeOutput(
+    source,
+    'exec', '-T', 'db',
+    'psql', '-U', 'smoke', '-d', 'smoke', '-At', '-c', sql,
+  );
+}
+
 function assertLocalDockerContext() {
   const context = process.env.DOCKER_CONTEXT;
   const host = context
@@ -203,6 +218,8 @@ async function runRestore() {
       return false;
     }
   }, 'restored task and job completion with exactly one effect');
+
+  assert(sourceTaskAndJobState(task.id) === 'queued:1:0', 'source task and queue job must remain intact without a committed effect');
 
   successMessage = 'Backup and isolated restore passed for synthetic task '
     + task.id

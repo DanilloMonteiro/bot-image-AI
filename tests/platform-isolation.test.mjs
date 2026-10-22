@@ -55,13 +55,17 @@ test('database exposure, public web binding, missing env exclusions, and cache g
 test('Railway graph keeps worker and storage private and production smoke synthetic', () => {
   const graph = read('.railway/railway.ts');
   const proxy = read('src/proxy.ts');
-  assert.match(graph, /postgres\('postgres', \{ region: 'us-east4-eqdc4a' \}\)/);
+  assert.match(graph, /const database = postgres\('postgres'\);/);
   assert.match(graph, /bucket\('media', \{ region: 'iad' \}\)/);
   assert.match(graph, /healthcheck: '\/health'/);
   assert.match(graph, /PRODUCTION_SMOKE_SECRET: preserve\(\)/);
   assert.match(graph, /DATABASE_URL: database\.env\.DATABASE_URL/);
   assert.doesNotMatch(graph, /domains\s*:/);
-  assert.doesNotMatch(graph, /BUCKET_|AWS_ACCESS_KEY|S3_/);
+  const appServices = graph.slice(graph.indexOf('const web = service('), graph.indexOf('const postgresBackup = service('));
+  assert.doesNotMatch(appServices, /BUCKET|AWS_ACCESS_KEY|S3_/);
+  const backupService = graph.slice(graph.indexOf('const postgresBackup = service('));
+  assert.match(backupService, /AWS_ACCESS_KEY_ID: ref\(postgresBackups, 'ACCESS_KEY_ID'\)/);
+  assert.match(backupService, /AWS_SECRET_ACCESS_KEY: ref\(postgresBackups, 'SECRET_ACCESS_KEY'\)/);
   assert.match(proxy, /isPublicStoryPath\(request\.nextUrl\.pathname\)/);
   assert.match(proxy, /matcher: \['\/\(\(\?!_next\/\|favicon\.ico\)\.\*\)'\]/);
   assert.match(read('compose.yaml'), /PLATFORM_ENVIRONMENT: staging/);

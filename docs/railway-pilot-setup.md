@@ -1,6 +1,20 @@
 # Railway — configuração inicial do piloto
 
-Guia de configuração e conferência para Isaac e Danillo. O Railway ainda não tem conta, workspace, projeto ou recursos deste piloto; a IaC no repositório descreve o que será criado, mas ainda não foi aplicada. Siga a ordem abaixo e use somente dados sintéticos.
+Guia de configuração e conferência para Isaac e Danillo. A versão original foi escrita em 2026-10-21, antes da criação dos recursos do piloto. O estado atualizado e as pendências estão registrados abaixo; não repita os passos de provisionamento no projeto de produção já existente. Use somente dados sintéticos.
+
+## Progresso e estado atual — 2026-10-22
+
+- Conta e workspace: plano Hobby de US$5/mês, conta com MFA, workspace `botimageai`. Danillo não pode ser membro Railway no Hobby; a colaboração continua pelo painel da aplicação e pelo GitHub.
+- Limites: Compute hard limit de US$10, soft alert por e-mail em US$8 e Agent hard limit de US$0. R$65 é o teto da fatura inteira; Bucket e tributos são cobrados separadamente e ainda precisam ser reconciliados. O hard limit não garante o teto total da fatura.
+- Projeto: `ensaios-ia-whatsapp-pilot`, ambiente `production`, ID `fdb4554f-dbfb-43fe-857b-15b680eaa7f4`. A CLI Railway 5.71.0 está vinculada ao projeto.
+- GitHub: Railway tem acesso a `DanilloMonteiro/bot-image-AI`. O remoto possui `develop` e `production`, mas não `main`; o usuário escolheu `production`. O PostgreSQL permanece em IAD (`iad`) para preservar o volume existente; web e worker estão em `us-east4-eqdc4a`.
+- Serviços: PostgreSQL, web e worker foram verificados `SUCCESS`/`RUNNING`; `/api/health` respondeu `ok`, um smoke sintético terminou `completed`, e rotas de cliente/mídia permaneceram 404. `PRODUCTION_BACKUP_RESTORE_VERIFIED=true` foi registrada após evidência; as outras cinco flags continuam ausentes.
+- Backup Hobby: `postgres-backup` executa `pg_dump` a cada 3 dias às 03:00 UTC (`0 3 */3 * *`) e envia ao Bucket privado `postgres-backups` em IAD, com retenção de 6 dias. O backup manual `postgres/20261022T194929Z.dump` foi confirmado com 48.394 bytes e restaurado em PostgreSQL descartável privado. O primeiro ciclo natural e a medição do RTO completo seguem pendentes; PITR/snapshots nativos não foram habilitados no Hobby.
+- Falha de publicação: o Railway tentou construir `/services/postgres-backup` a partir de `main`, branch que não existe. Os três arquivos do serviço e o IaC atualizado estão no PR [#14](https://github.com/DanilloMonteiro/bot-image-AI/pull/14), direcionado a `production`; o commit `a88aa50` adiciona o serviço e `d46648b` registra a falha dos checks. O plano Railway atualizado apresenta 0 criações, 3 atualizações de branch e 0 exclusões, mas ainda não foi aplicado.
+- Pendências do PR #14: o CI falha porque `tests/platform-isolation.test.mjs` ainda exige PostgreSQL em `us-east4-eqdc4a`, contrário à decisão de manter o banco existente em IAD. Nenhum teste foi editado. A branch `production` exige PR e revisão; a atualização de fonte não deve ser aplicada antes de os arquivos chegarem a `production`.
+- Estado local: `.railway/railway.ts`, `docs/platform-staging.md` e os dois arquivos de tracking Railway foram atualizados; `services/postgres-backup/` contém `Dockerfile`, `backup.sh` e `restore-drill.sh`. Somente esses sete arquivos estão no escopo do PR #14; outras alterações locais não foram incluídas.
+
+Este PR #13 atualiza o runbook e o plano de acompanhamento na branch de documentação para `develop`. O PR #14 contém a implementação e a configuração que precisam chegar a `production`; mantenha os dois fluxos distintos ao retomar.
 
 ## Antes de criar recursos: confirmar o custo do workspace
 

@@ -38,6 +38,11 @@ One-shot documentation change: the service graph and guardrails are already impl
 
 ## Plan Change Log
 
+- 2026-10-22 — Runbook status updated after production setup: Hobby account/MFA, workspace `botimageai`, project `ensaios-ia-whatsapp-pilot`, hard/soft limits, web/worker smoke, PostgreSQL retained in IAD, and Hobby-compatible three-day logical backup recorded. Manual backup and isolated restore passed; first natural cron run and full RTO remain pending.
+- 2026-10-22 — GitHub diagnosis: the configured `main` branch does not exist in `DanilloMonteiro/bot-image-AI`; user selected `production`. The local implementation adds the backup service/Bucket, updates all GitHub source refs, and preserves `PRODUCTION_BACKUP_RESTORE_VERIFIED` to prevent IaC deletion. Railway plan is 0 adds, 3 branch updates, 0 deletions; it has not been applied.
+- 2026-10-22 — Implementation is in [PR #14](https://github.com/DanilloMonteiro/bot-image-AI/pull/14) (`a88aa50`, follow-up tracking commit `d46648b`), targeting `production`. Its CI fails because `tests/platform-isolation.test.mjs` asserts the old PostgreSQL region; no test file was changed. GitHub requires PR review. This documentation PR #13 targets `develop` and does not itself publish the service implementation to production.
+- 2026-10-22 — PR #13 checks are also failing because the CI smoke timed out waiting for the worker health check after simulated database loss (`worker health reports database loss`). This update documents that result; no tests were run locally and no unrelated changes were included.
+
 
 ## Review Triage Log
 

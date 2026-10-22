@@ -193,7 +193,7 @@ try {
     try { return workerHealthStatus() === '503'; } catch { return false; }
   }, 'worker health reports database loss');
   const unavailable = await request(base, { method: 'POST', headers: auth });
-  assert(unavailable?.status === 503, 'database loss must return 503');
+  assert(unavailable?.status === 503, `database loss must return 503; got ${unavailable?.status ?? 'no response'}`);
   assert(!(await unavailable.json()).id, 'failed POST must not return an accepted ID');
   console.log(`Smoke passed: PostgreSQL attempt guard; ${task.id} recovered after a crash following commit without duplicating its effect; ${failedTask.id} emitted failure/completion events and recovered with one effect; stale-attempt fencing, auth and database failure checked.`);
 } finally {

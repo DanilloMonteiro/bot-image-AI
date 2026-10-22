@@ -4,8 +4,8 @@ import { PgBoss, type ConnectionOptions } from 'pg-boss';
 import type { SmokeRepository, SmokeRetryResult, SmokeTask } from '../../modules/platform-smoke/repository.js';
 
 export const SMOKE_QUEUE = 'platform-smoke';
-const READINESS_QUERY_TIMEOUT_MS = 3_000;
-const READINESS_CHECK_TIMEOUT_MS = 4_000;
+const READINESS_QUERY_TIMEOUT_MS = 1_500;
+const READINESS_CHECK_TIMEOUT_MS = 2_000;
 
 function databaseUrl(): string {
   const url = process.env.DATABASE_URL;

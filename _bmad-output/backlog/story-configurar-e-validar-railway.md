@@ -110,9 +110,17 @@ Preparar e validar manualmente o workspace e o ambiente de produção do Railway
 - contrato de uso — docs/platform-usage-contract.md, Railway pilot reconciliation
 - requisitos da plataforma — _bmad-output/initiative-brief-ensaios-ia-whatsapp/epic-platform-foundation/epic-platform-foundation.md, Requirements F2, F4 e F5
 - implementação existente — _bmad-output/initiative-brief-ensaios-ia-whatsapp/epic-platform-foundation/story-base-web-e-worker-e-implantada-em-producao-plan.md, Provider verification remains pending
+- preços Railway — https://railway.com/pricing, planos Hobby e Pro
+- cobrança Railway — https://docs.railway.com/pricing/plans, Subscription pricing e Included usage
+- limites Railway — https://docs.railway.com/pricing/cost-control, Usage limits e Compute vs. Agent usage limits
+- fatura Railway — https://docs.railway.com/pricing/understanding-your-bill, Included usage e Tax and VAT
 
 ## Notes
 
 - Risk rationale: uma configuração errada pode expor dados, exceder limites de custo ou comprometer a recuperação do ambiente de produção.
+- Current finding (2026-10-22): o Hobby cobra mínimo de US$5 e inclui US$5 de uso mensal. Se o uso de recursos for US$13, a conta total do plano e uso será US$13 (US$5 cobertos pela assinatura e US$8 acima do crédito); não se soma mais US$5 ao uso total. Se R$65 for a alocação de Compute do guia, o hard limit deve ser o equivalente integral em USD, não o equivalente a R$40.
+- Limite do controle: o Compute hard limit cobre CPU, memória, armazenamento e egress e pode desligar os serviços ao ser atingido. Ele não limita cobranças de armazenamento do Bucket; impostos também podem aparecer separadamente na fatura.
+- Open question: os R$65 são somente a alocação de Compute indicada no guia ou precisam cobrir também Bucket e impostos? Se forem o teto total da fatura, o hard limit de Compute sozinho não garante esse teto.
+- Open question: o plano Hobby atende ao requisito de dois administradores com contas individuais? A página de preços o descreve como workspace de desenvolvedor único e informa assentos de workspace ilimitados no Pro; confirmar o acesso necessário antes de assinar.
 - Open question: qual mecanismo adicional será usado para verificar alertas em 60%, 80% e 95%, já que os controles Railway descritos no guia não cobrem todos esses limites?
 - Check externo: antes de marcar a tarefa como done, o sócio que não aplicou o plano deve revisar no Railway os acessos, alertas, backup, flags e domínios configurados.

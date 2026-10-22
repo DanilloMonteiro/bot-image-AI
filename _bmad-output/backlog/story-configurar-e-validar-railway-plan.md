@@ -15,6 +15,8 @@ status: in-progress
 ## Gates pendentes
 
 - Aprovação do plano antes de aplicar mudanças no Railway.
+- Confirmar se os R$65 cobrem Compute apenas ou a fatura inteira, incluindo Bucket e impostos.
+- Confirmar se o Hobby permite os dois administradores individuais exigidos pelo guia.
 - Mecanismo adicional verificado para alertas em 60%, 80% e 95%.
 - Evidências de custo, privacidade, limite de Compute, autoridade de pausa e backup/restauração antes de definir as flags de produção.
 
@@ -23,3 +25,4 @@ status: in-progress
 Adicione uma linha datada para cada ação, incluindo o resultado e a evidência não sensível. Não registre valores de segredos.
 
 - 2026-10-22 — Conta Railway criada. Workspace, projeto de produção e demais controles ainda não foram confirmados.
+- 2026-10-22 — Documentação oficial consultada: Hobby inclui US$5 de uso no mínimo mensal de US$5; o hard limit restringe Compute, não Bucket. Critérios e pendências atualizados no ticket.

@@ -187,6 +187,7 @@ try {
   const fencedTask = await taskState(fenceTask.id);
   assert(fencedTask?.state === 'processing' && fencedTask.errorCode === null, 'newer processing attempt must keep its own status');
 
+  compose('up', '-d', '--wait', 'worker');
   compose('stop', 'db');
   await waitFor(() => {
     try { return workerHealthStatus() === '503'; } catch { return false; }

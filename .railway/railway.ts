@@ -19,6 +19,7 @@ const web = service('web', {
     PLATFORM_ENVIRONMENT: 'production',
     PRODUCTION_SMOKE_SECRET: preserve(),
     PRODUCTION_BACKUP_RESTORE_VERIFIED: preserve(),
+    PRODUCTION_COST_PAUSE_AUTHORITY_VERIFIED: preserve(),
   },
 });
 

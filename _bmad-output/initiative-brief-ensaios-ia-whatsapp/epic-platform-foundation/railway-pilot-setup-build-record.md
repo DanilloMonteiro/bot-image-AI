@@ -1,9 +1,6 @@
 ---
 title: 'Guia reproduzível de configuração do Railway para o piloto'
-type: 'chore'
-ticket: '6'
 created: '2026-10-21'
-status: 'built'
 baseline_revision: '8b6fd85a2cd0f0b75e4a1e7c349dff08fb1ff198'
 route: 'oneshot'
 route_source: 'pinned'
@@ -18,6 +15,8 @@ context:
   - '{project-root}/.railway/railway.ts'
   - '{project-root}/_bmad-output/initiative-brief-ensaios-ia-whatsapp/architecture-ensaios-ia-whatsapp/architecture-ensaios-ia-whatsapp.md'
 ---
+
+This file is a historical implementation and review record for the Railway setup guide, not a separate ticket. Current setup work and status live in `backlog/story-configurar-e-validar-railway.md` and its plan.
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
 

@@ -3,7 +3,7 @@ title: "Refactor sweep da base de plataforma"
 type: "refactor"
 ticket: 7
 created: "2026-10-20"
-status: "built"
+status: done
 baseline_revision: "ce7ce6b14849e98392f685cf38a58e12f9681457"
 route: "oneshot"
 route_source: "auto"

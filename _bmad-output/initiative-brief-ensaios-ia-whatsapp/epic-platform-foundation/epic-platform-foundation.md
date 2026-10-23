@@ -12,7 +12,7 @@ risk: high
 
 ## Description
 
-Criar a fundação greenfield para o monólito modular em TypeScript, com aplicação Next.js e worker no mesmo código-base, fronteiras de módulo e ambiente operacional suficiente para entregar os demais épicos em produção. Railway para aplicação/worker, PostgreSQL com pg-boss e Railway Bucket privado em IAD foram escolhidos; a conta e a configuração efetivas ainda aguardam validação de custo, backup/restauração e privacidade antes da ativação.
+Criar a fundação greenfield para o monólito modular em TypeScript, com aplicação Next.js e worker no mesmo código-base, fronteiras de módulo e ambiente operacional suficiente para entregar os demais épicos em produção. Railway para aplicação/worker, PostgreSQL com pg-boss e Railway Bucket privado em IAD foram escolhidos; o workspace e a configuração de produção estão conectados. Evidências pendentes de custo, privacidade e recuperação continuam registradas na tarefa Railway e são necessárias antes de tráfego de clientes, fotos reais ou operações pagas.
 
 ## Outcome
 
@@ -48,7 +48,8 @@ Os demais owners conseguem entregar capacidades no mesmo produto com execução 
 ## Notes
 
 - Decision: monólito modular, TypeScript, Next.js mais worker no mesmo código-base e propriedade dos dados por módulo foram confirmados pelo usuário.
-- Open question: o workspace Railway ainda não está conectado; validar conta, custo medido, configuração, backup/restauração, segurança e privacidade antes da ativação de tráfego e dados reais.
-- Source conflict: o plano fonte propõe Fastify, Drizzle e Railway/Lightsail. A decisão vigente fixa Next.js e worker no mesmo código-base, PostgreSQL com pg-boss, Railway para app/worker e Railway Bucket privado em IAD; falta validar a configuração efetiva e os termos/custos do provedor.
-- Decision: 2026-10-21 — Railway, PostgreSQL/pg-boss e Railway Bucket privado em IAD foram escolhidos. A conexão do workspace e as verificações de produção permanecem pendentes; histórias que exigem produção aguardam acesso autorizado e a conclusão da base.
+- Resolved (2026-10-23): o workspace Railway está conectado; web, worker, PostgreSQL e postgres-backup estão online. Smoke sintético e restauração isolada foram verificados. A reconciliação de custo, privacidade, primeira execução natural do backup, alertas e RTO permanecem na tarefa Railway.
+- Source conflict: o plano fonte propõe Fastify, Drizzle e Railway/Lightsail. A decisão vigente fixa Next.js e worker no mesmo código-base, PostgreSQL com pg-boss, Railway para app/worker e Railway Bucket privado em IAD; a configuração efetiva está implantada; a reconciliação de termos e custos do provedor permanece pendente.
+- Historical decision (2026-10-21; superseded by the 2026-10-23 update): Railway, PostgreSQL/pg-boss e Railway Bucket privado em IAD foram escolhidos; à época, a conexão do workspace e as verificações de produção ainda estavam pendentes.
+- Decision (2026-10-23): o desenvolvimento de Budget e Data Policy não precisa aguardar o fechamento deste épico. As evidências operacionais ainda pendentes continuam sendo necessárias antes de tráfego de clientes, fotos reais ou operações pagas.
 - Decision: 2026-10-14 — observabilidade e backup/restauração podem avançar em paralelo após isolamento dos ambientes; deploy de produção espera ambos; o Refactor sweep fecha o épico.

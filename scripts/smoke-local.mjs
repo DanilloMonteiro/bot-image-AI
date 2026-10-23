@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 
 const secret = randomBytes(32).toString('hex');
 const project = `imagesystem-smoke-${randomBytes(8).toString('hex')}`;
@@ -12,7 +12,9 @@ const env = {
   STAGING_SMOKE_TEST_FAIL_UNTIL_ATTEMPT: '0',
   STAGING_SMOKE_TEST_CRASH_AFTER_COMMIT: '0',
 };
+const origin = 'http://127.0.0.1:3000';
 const base = 'http://127.0.0.1:3000/api/internal/smoke';
+const budgetBase = `${origin}/api/internal/budget/trace`;
 const auth = { Authorization: `Bearer ${secret}` };
 const compose = (...args) => execFileSync('docker', ['compose', '-p', project, ...args], { env, stdio: 'inherit' });
 const composeOutput = (...args) => execFileSync('docker', ['compose', '-p', project, ...args], { env, encoding: 'utf8' }).trim();
@@ -33,6 +35,10 @@ async function waitFor(check, label, timeoutMs = 60000) {
 }
 function effectAndJobState(id) {
   const sql = `SELECT COALESCE((SELECT state::text FROM pgboss.job WHERE name = 'platform-smoke' AND id = '${id}'::uuid), 'missing') || ':' || (SELECT count(*)::text FROM platform_smoke_effects WHERE id = '${id}'::uuid)`;
+  return composeOutput('exec', '-T', 'db', 'psql', '-U', 'smoke', '-d', 'smoke', '-At', '-c', sql);
+}
+function budgetState(id) {
+  const sql = `SELECT COALESCE((SELECT state::text FROM pgboss.job WHERE name = 'budget-trace' AND id = '${id}'::uuid), 'missing') || ':' || (SELECT count(*)::text FROM pgboss.job WHERE name = 'budget-trace' AND id = '${id}'::uuid) || ':' || (SELECT count(*)::text FROM budget_reservations WHERE action_id = '${id}'::uuid) || ':' || COALESCE((SELECT amount_minor::text || ':' || currency || ':' || category || ':' || status FROM budget_reservations WHERE action_id = '${id}'::uuid), 'missing')`;
   return composeOutput('exec', '-T', 'db', 'psql', '-U', 'smoke', '-d', 'smoke', '-At', '-c', sql);
 }
 function workerHealthStatus() {
@@ -128,6 +134,38 @@ try {
 
   compose('up', '-d', '--wait', 'worker');
   assert(workerHealthStatus() === '200', 'worker internal health must be ready after connecting to PostgreSQL and pg-boss');
+
+  const rejectedBudgetId = randomUUID();
+  assert((await request(budgetBase, {
+    method: 'POST', headers: { 'Idempotency-Key': rejectedBudgetId },
+  }))?.status === 401, 'unauthorized Budget trace must be rejected');
+  assert((await request(budgetBase, {
+    method: 'POST', headers: { ...auth, 'Idempotency-Key': 'invalid' },
+  }))?.status === 400, 'invalid Budget idempotency key must be rejected');
+  assert((await request(budgetBase, {
+    method: 'POST', headers: { ...auth, 'Idempotency-Key': rejectedBudgetId }, body: '{}',
+  }))?.status === 400, 'body-bearing Budget trace must be rejected');
+  assert(budgetState(rejectedBudgetId) === 'missing:0:0:missing', 'invalid Budget traces must not create a reservation or job');
+  assert((await request(`${origin}/api/customer/profile`))?.status === 404, 'customer routes must remain blocked');
+  assert((await request(`${origin}/api/media/photo`))?.status === 404, 'media routes must remain blocked');
+
+  const budgetActionId = randomUUID();
+  const budgetRequests = await Promise.all([
+    request(budgetBase, { method: 'POST', headers: { ...auth, 'Idempotency-Key': budgetActionId.toUpperCase() } }),
+    request(budgetBase, { method: 'POST', headers: { ...auth, 'Idempotency-Key': budgetActionId } }),
+    request(budgetBase, { method: 'POST', headers: { ...auth, 'Idempotency-Key': budgetActionId } }),
+  ]);
+  assert(budgetRequests.every((response) => response?.status === 202), 'concurrent Budget replays must all be accepted');
+  const budgetReservations = await Promise.all(budgetRequests.map((response) => response.json()));
+  assert(budgetReservations.every((reservation) => reservation.actionId === budgetActionId), 'Budget replays must return the normalized action ID');
+  assert(budgetReservations.every((reservation) => reservation.amountMinor === 1
+    && reservation.currency === 'BRL'
+    && reservation.category === 'synthetic_trace'), 'Budget trace must use the approved synthetic reservation');
+  await waitFor(async () => {
+    try { return budgetState(budgetActionId) === 'completed:1:1:1:BRL:synthetic_trace:reserved'; }
+    catch { return false; }
+  }, 'one completed Budget trace job and reservation');
+
   compose('stop', 'worker');
   const postgresAttemptTaskId = checkPostgresAttemptGuard();
   assert(typeof postgresAttemptTaskId === 'string', 'PostgreSQL attempt check must return its task ID');
@@ -195,7 +233,11 @@ try {
   const unavailable = await request(base, { method: 'POST', headers: auth });
   assert(unavailable?.status === 503, `database loss must return 503; got ${unavailable?.status ?? 'no response'}`);
   assert(!(await unavailable.json()).id, 'failed POST must not return an accepted ID');
-  console.log(`Smoke passed: PostgreSQL attempt guard; ${task.id} recovered after a crash following commit without duplicating its effect; ${failedTask.id} emitted failure/completion events and recovered with one effect; stale-attempt fencing, auth and database failure checked.`);
+  const budgetUnavailable = await request(budgetBase, {
+    method: 'POST', headers: { ...auth, 'Idempotency-Key': randomUUID() },
+  });
+  assert(budgetUnavailable?.status === 503, 'database loss must fail closed for Budget traces');
+  console.log(`Smoke passed: Budget action ${budgetActionId} completed with one reservation and one job; customer/media gates, PostgreSQL attempt guard, crash redelivery, recovery, auth and database failure checked.`);
 } finally {
   if (cleanupNeeded) compose('down', '-v');
 }

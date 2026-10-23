@@ -3,7 +3,7 @@ title: "Base web e worker é implantada em produção"
 type: feature
 ticket: '6'
 created: '2026-10-20'
-status: built
+status: done
 assignee: "Isaac"
 baseline_revision: 'c05978e1910710bb597774deb312e2a06620aea0'
 route: 'full'

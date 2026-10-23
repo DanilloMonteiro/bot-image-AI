@@ -15,8 +15,12 @@ const { emitPlatformEvent } = require('../dist/adapters/console/platform-events.
 const { handlePlatformSmokeJob } = require('../dist/worker/platform-smoke-handler.js');
 const { createWorkerHealthServer } = require('../dist/worker/health-server.js');
 const { isPlatformUsageRecordV1 } = require('../dist/contracts/platform-usage/v1.js');
+const { Budget, SYNTHETIC_TRACE_RESERVATION } = require('../dist/modules/budget/use-cases.js');
+const { handleBudgetTraceRequest } = require('../dist/adapters/http/budget-trace-handler.js');
+const { handleBudgetTraceJob } = require('../dist/worker/budget-trace-handler.js');
 
 const taskId = 'e5ea330c-48e5-44c2-b383-7382890524be';
+const budgetActionId = 'a1ea330c-48e5-44c2-b383-7382890524be';
 
 class DurableFake {
   constructor(rows = new Map()) {
@@ -71,6 +75,27 @@ class DurableFake {
     });
     job.state = 'retry';
     return { status: 'retried', task: await this.find(id) };
+  }
+}
+
+class BudgetFake {
+  constructor() {
+    this.reservations = new Map();
+    this.jobs = new Map();
+  }
+  async reserveSyntheticTrace(actionId) {
+    if (!this.reservations.has(actionId)) {
+      this.reservations.set(actionId, {
+        actionId,
+        ...SYNTHETIC_TRACE_RESERVATION,
+        createdAt: '2026-10-23T00:00:00.000Z',
+      });
+      this.jobs.set(actionId, { id: actionId, state: 'created' });
+    }
+    return this.reservations.get(actionId);
+  }
+  async findSyntheticTrace(actionId) {
+    return this.reservations.get(actionId) ?? null;
   }
 }
 
@@ -277,6 +302,100 @@ test('smoke submit uses the environment-specific secret and rejects credentials 
   }
 });
 
+test('Budget trace requires staging/production auth, an empty body, and a stable UUID key', async () => {
+  const previous = {
+    environment: process.env.PLATFORM_ENVIRONMENT,
+    stagingSecret: process.env.STAGING_SMOKE_SECRET,
+    productionSecret: process.env.PRODUCTION_SMOKE_SECRET,
+  };
+  process.env.PLATFORM_ENVIRONMENT = 'production';
+  process.env.STAGING_SMOKE_SECRET = 's'.repeat(64);
+  process.env.PRODUCTION_SMOKE_SECRET = 'p'.repeat(64);
+  try {
+    const repository = new BudgetFake();
+    const budget = new Budget(repository);
+    const request = ({ secret, key, body } = {}) => new Request('http://local/api/internal/budget/trace', {
+      method: 'POST',
+      headers: {
+        ...(secret ? { Authorization: `Bearer ${secret}` } : {}),
+        ...(key ? { 'Idempotency-Key': key } : {}),
+      },
+      ...(body === undefined ? {} : { body }),
+    });
+
+    const unauthorized = await handleBudgetTraceRequest(
+      request({ key: budgetActionId }), (id) => budget.reserveSyntheticTrace(id),
+    );
+    const wrongEnvironmentSecret = await handleBudgetTraceRequest(
+      request({ secret: process.env.STAGING_SMOKE_SECRET, key: budgetActionId }),
+      (id) => budget.reserveSyntheticTrace(id),
+    );
+    const invalidKey = await handleBudgetTraceRequest(
+      request({ secret: process.env.PRODUCTION_SMOKE_SECRET, key: 'not-a-uuid' }),
+      (id) => budget.reserveSyntheticTrace(id),
+    );
+    const bodyBearing = await handleBudgetTraceRequest(
+      request({ secret: process.env.PRODUCTION_SMOKE_SECRET, key: budgetActionId, body: '{}' }),
+      (id) => budget.reserveSyntheticTrace(id),
+    );
+    assert.equal(unauthorized.status, 401);
+    assert.equal(wrongEnvironmentSecret.status, 401);
+    assert.equal(invalidKey.status, 400);
+    assert.equal(bodyBearing.status, 400);
+    for (const response of [unauthorized, wrongEnvironmentSecret, invalidKey, bodyBearing]) {
+      assert.equal(response.headers.get('Cache-Control'), 'no-store');
+    }
+    assert.equal(repository.reservations.size, 0);
+    assert.equal(repository.jobs.size, 0);
+
+    const accepted = await handleBudgetTraceRequest(
+      request({ secret: process.env.PRODUCTION_SMOKE_SECRET, key: budgetActionId.toUpperCase() }),
+      (id) => budget.reserveSyntheticTrace(id),
+    );
+    const replay = await handleBudgetTraceRequest(
+      request({ secret: process.env.PRODUCTION_SMOKE_SECRET, key: budgetActionId }),
+      (id) => budget.reserveSyntheticTrace(id),
+    );
+    assert.equal(accepted.status, 202);
+    assert.equal(replay.status, 202);
+    assert.equal(accepted.headers.get('Cache-Control'), 'no-store');
+    const acceptedValue = await accepted.json();
+    const replayValue = await replay.json();
+    assert.deepEqual(acceptedValue, replayValue);
+    assert.equal(acceptedValue.actionId, budgetActionId);
+    assert.equal(repository.reservations.size, 1);
+    assert.equal(repository.jobs.size, 1);
+  } finally {
+    if (previous.environment === undefined) delete process.env.PLATFORM_ENVIRONMENT;
+    else process.env.PLATFORM_ENVIRONMENT = previous.environment;
+    if (previous.stagingSecret === undefined) delete process.env.STAGING_SMOKE_SECRET;
+    else process.env.STAGING_SMOKE_SECRET = previous.stagingSecret;
+    if (previous.productionSecret === undefined) delete process.env.PRODUCTION_SMOKE_SECRET;
+    else process.env.PRODUCTION_SMOKE_SECRET = previous.productionSecret;
+  }
+});
+
+test('concurrent Budget reservations and worker redelivery retain one synthetic reservation and job', async () => {
+  const repository = new BudgetFake();
+  const budget = new Budget(repository);
+  const actions = await Promise.all(Array.from({ length: 12 }, () => budget.reserveSyntheticTrace(budgetActionId)));
+  assert.ok(actions.every((action) => action.actionId === budgetActionId));
+  assert.equal(repository.reservations.size, 1);
+  assert.equal(repository.jobs.size, 1);
+  assert.equal(actions[0].amountMinor, 1);
+  assert.equal(actions[0].currency, 'BRL');
+  assert.equal(actions[0].category, 'synthetic_trace');
+
+  await handleBudgetTraceJob({ actionId: budgetActionId, jobId: budgetActionId, attemptNumber: 0 }, { budget });
+  await handleBudgetTraceJob({ actionId: budgetActionId, jobId: budgetActionId, attemptNumber: 1 }, { budget });
+  assert.equal(repository.reservations.size, 1);
+  assert.equal(repository.jobs.size, 1);
+  await assert.rejects(
+    handleBudgetTraceJob({ actionId: budgetActionId, jobId: taskId, attemptNumber: 2 }, { budget }),
+    /invalid_budget_trace_job/,
+  );
+});
+
 test('failed persistence cannot report acceptance', async () => {
   const smoke = new PlatformSmoke({ create: async () => { throw new Error('database unavailable'); } });
   await assert.rejects(smoke.accept(), /database unavailable/);
@@ -361,10 +480,13 @@ test('customer and media routes remain blocked until privacy, cost, and backup e
   assert.equal(shouldBlockCustomerMediaPath('/api/media/photo', { ...approvals, PLATFORM_ENVIRONMENT: 'staging' }), true);
   assert.equal(isPublicStoryPath('/api/health', base), true);
   assert.equal(isPublicStoryPath('/api/internal/smoke', base), true);
+  assert.equal(isPublicStoryPath('/api/internal/budget/trace', base), true);
+  assert.equal(isPublicStoryPath('/api/internal/budget/trace/extra', base), false);
   assert.equal(isPublicStoryPath(`/api/internal/smoke/${taskId}/retry`, base), true);
   assert.equal(isPublicStoryPath('/', base), false);
   assert.equal(isPublicStoryPath('/api/other', base), false);
   assert.equal(isPublicStoryPath('/api/media/photo', base), false);
+  assert.equal(isPublicStoryPath('/api/customer/profile', base), false);
   assert.equal(isPublicStoryPath('/api/media/photo', { ...base, ...approvals }), true);
 });
 

@@ -3,7 +3,7 @@ type: epic
 title: Orçamento do piloto e política de dados
 parent: initiative-brief-ensaios-ia-whatsapp
 covers: [CAP-7, CAP-2]
-after: [epic-platform-foundation]
+after: []
 assignee: ""
 risk: high
 ---
@@ -25,7 +25,7 @@ Cada operação com custo é autorizada somente quando seu custo cabe no saldo c
 3. Provedores e tratamentos de foto original, resultados, conversa/consentimento, backups e cópias externas foram avaliados e a política versionada informa finalidade, acesso, retenção, exclusão e exceções.
 4. A versão aprovada e seus requisitos de apresentação/gate estão disponíveis ao épico de Conversas; ele apresenta a política antes da coleta e bloqueia coleta/processamento enquanto faltar aprovação ou informação.
 5. O Budget expõe custos reconciliados, saldo e dados necessários à avaliação de margem para Operações, mantendo hipóteses claramente marcadas e sem anunciar preços de teste como valores finais.
-6. O tracer sintético de aplicação e worker está implantado e validado em produção após a aceitação da Base de Plataforma, sem dados pessoais, tráfego real de WhatsApp ou operações reais de custo.
+6. O tracer sintético de aplicação e worker está implantado e validado usando a capacidade entregue pela story 1.6, sem exigir o fechamento administrativo do Epic 1 e sem usar dados pessoais, tráfego real de WhatsApp ou operações reais de custo.
 
 ## Boundaries
 
@@ -53,6 +53,7 @@ Cada operação com custo é autorizada somente quando seu custo cabe no saldo c
 - Open gate: não processar foto real até a política de dados, criptografia adequada, exclusão/retenção e tratamento de cópias terem sido validados.
 - Decision: saldo/custo desconhecido ou insuficiente bloqueia novo gasto até reconciliação; a liberação de reserva é auditada e pode ser feita por qualquer um dos dois sócios administradores depois de terminalidade e conciliação.
 - Decision (2026-10-21): o candidato `epic-base-segura-custos` foi integrado neste épico oficial. A história candidata de endurecimento genérico de CI/ambiente/backup foi absorvida pela Base de Plataforma (histórias 1.5 e 1.6), evitando duplicar sua propriedade; o tracer de produção permanece condicionado à 1.6 e à conexão do workspace Railway.
-- Decision (2026-10-21): o primeiro tracer do Budget será local e sintético; o tracer em produção depende da entrega 1.6 e do acesso ao Railway. O épico oficial permanece depois da Base de Plataforma, portanto nenhuma história deste épico começa até essa base ser aceita.
+- Historical decision (2026-10-21; superseded for epic-level sequencing on 2026-10-23): o primeiro tracer do Budget será sintético e usa a capacidade implantada pela story 1.6. A decisão anterior de aguardar o fechamento de todo o Epic 1 foi removida; as dependências internas das stories continuam válidas.
 - Decision (2026-10-21): Conversas é responsável por apresentar a versão aprovada e bloquear a coleta sem ela; Retratos é responsável por executar retenção/exclusão nos dados de imagem; este épico fornece o inventário e a política aprovados.
-- Open gate (2026-10-21): o workspace Railway ainda não está conectado; não executar tracer ou validação de produção até o acesso ser provisionado e as aprovações de operação registradas. Manter somente dados sintéticos. A história 1.5 da Base de Plataforma ainda aparece como `in-progress`.
+- Resolved historical gate (2026-10-21; resolved on 2026-10-23): o workspace Railway está conectado e a configuração de produção foi verificada; as stories 1.1–1.7 estão marcadas como concluídas. As pendências de privacidade, custo, backup natural, alertas e RTO continuam sendo gates para tráfego real, fotos ou operações pagas, mas não bloqueiam o desenvolvimento sintético do Epic 2.
+- Decision (2026-10-23): o desenvolvimento do Epic 2 pode começar sem aguardar o fechamento do Epic 1. A story 2.1 usa a capacidade já entregue pela story 1.6, sem bloqueio cruzado formal; todas as dependências internas deste epic permanecem. Continuar apenas com dados e operações sintéticos até que as aprovações operacionais correspondentes sejam registradas.

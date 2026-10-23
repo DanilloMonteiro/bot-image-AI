@@ -1,7 +1,16 @@
-import { PostgresSmokeRepository, SMOKE_QUEUE, checkRuntimeReadiness, ensureReady, getBoss } from '../adapters/postgres/smoke-repository.js';
+import { PostgresSmokeRepository, SMOKE_QUEUE, checkRuntimeReadiness, ensureReady } from '../adapters/postgres/smoke-repository.js';
+import { getBoss } from '../adapters/postgres/runtime.js';
+import {
+  BUDGET_TRACE_QUEUE,
+  checkBudgetRuntimeReadiness,
+  ensureBudgetReady,
+  PostgresBudgetRepository,
+} from '../adapters/postgres/budget-repository.js';
 import { emitPlatformEvent } from '../adapters/console/platform-events.js';
 import { PlatformSmoke } from '../modules/platform-smoke/use-cases.js';
+import { Budget } from '../modules/budget/use-cases.js';
 import { handlePlatformSmokeJob } from './platform-smoke-handler.js';
+import { handleBudgetTraceJob } from './budget-trace-handler.js';
 import { createWorkerHealthServer } from './health-server.js';
 import type { Server } from 'node:http';
 
@@ -21,7 +30,9 @@ let workerReady = false;
 let healthServer: Server | undefined;
 
 async function listenForHealth(port: number): Promise<void> {
-  healthServer = createWorkerHealthServer(async () => workerReady && checkRuntimeReadiness());
+  healthServer = createWorkerHealthServer(async () => workerReady
+    && await checkRuntimeReadiness()
+    && await checkBudgetRuntimeReadiness());
   await new Promise<void>((resolve, reject) => {
     healthServer?.once('error', reject);
     healthServer?.listen(port, '0.0.0.0', resolve);
@@ -47,7 +58,9 @@ async function main(): Promise<void> {
   }
   await listenForHealth(healthPort);
   await ensureReady();
+  await ensureBudgetReady();
   const smoke = new PlatformSmoke(new PostgresSmokeRepository());
+  const budget = new Budget(new PostgresBudgetRepository());
   const boss = getBoss();
   boss.on('error', (error) => structuredLog('queue_error', safeErrorDetails(error)));
   await boss.work(SMOKE_QUEUE, async (jobs) => {
@@ -71,6 +84,23 @@ async function main(): Promise<void> {
         emit: emitPlatformEvent,
         crash: () => { process.kill(process.pid, 'SIGKILL'); },
       });
+    }
+  });
+  await boss.work(BUDGET_TRACE_QUEUE, async (jobs) => {
+    for (const job of jobs) {
+      const data: unknown = job.data;
+      if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('invalid_job');
+      const jobData = data as { actionId?: unknown; kind?: unknown };
+      if (typeof jobData.actionId !== 'string'
+        || jobData.kind !== 'synthetic-budget-trace'
+        || job.id !== jobData.actionId) {
+        throw new Error('invalid_job');
+      }
+      await handleBudgetTraceJob({
+        actionId: jobData.actionId,
+        jobId: job.id,
+        attemptNumber: job.retryCount,
+      }, { budget });
     }
   });
   workerReady = true;

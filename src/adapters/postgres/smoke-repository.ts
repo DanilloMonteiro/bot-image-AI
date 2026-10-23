@@ -1,69 +1,18 @@
 import { randomUUID } from 'node:crypto';
-import { Pool, type PoolClient } from 'pg';
-import { PgBoss, type ConnectionOptions } from 'pg-boss';
 import type { SmokeRepository, SmokeRetryResult, SmokeTask } from '../../modules/platform-smoke/repository.js';
+import { getBoss, getPool, startBoss, transactionDb } from './runtime';
+
+export { getBoss };
 
 export const SMOKE_QUEUE = 'platform-smoke';
 const READINESS_QUERY_TIMEOUT_MS = 1_500;
 const READINESS_CHECK_TIMEOUT_MS = 2_000;
 
-function databaseUrl(): string {
-  const url = process.env.DATABASE_URL;
-  if (url) return url;
-
-  const host = process.env.DATABASE_HOST;
-  const port = process.env.DATABASE_PORT ?? '5432';
-  const name = process.env.DATABASE_NAME;
-  const user = process.env.DATABASE_USER;
-  const password = process.env.DATABASE_PASSWORD;
-  if (!host || !name || !user || password === undefined) {
-    throw new Error('DATABASE_URL or database connection settings are required');
-  }
-
-  const connection = new URL('postgresql://localhost');
-  connection.hostname = host;
-  connection.port = port;
-  connection.pathname = `/${name}`;
-  connection.username = user;
-  connection.password = password;
-  return connection.toString();
-}
-
-let pool: Pool | undefined;
-let boss: PgBoss | undefined;
 let ready: Promise<void> | undefined;
-
-function getPool(): Pool {
-  if (!pool) {
-    const nextPool = new Pool({ connectionString: databaseUrl(), connectionTimeoutMillis: 3000 });
-    nextPool.on('error', (error: Error) => {
-      const code = 'code' in error && typeof error.code === 'string' ? error.code : undefined;
-      console.error('postgres_pool_error', {
-        errorName: error.name,
-        ...(code ? { errorCode: code } : {}),
-      });
-    });
-    pool = nextPool;
-  }
-  return pool;
-}
-
-export function getBoss(): PgBoss {
-  if (!boss) {
-    boss = process.env.STAGING_SMOKE_TEST_MODE === '1'
-      ? new PgBoss({
-        connectionString: databaseUrl(),
-        monitorIntervalSeconds: 1,
-        superviseIntervalSeconds: 1,
-      })
-      : new PgBoss(databaseUrl());
-  }
-  return boss;
-}
 
 export function ensureReady(): Promise<void> {
   ready ??= (async () => {
-    await getBoss().start();
+    await startBoss();
     await getPool().query(`CREATE TABLE IF NOT EXISTS platform_smoke_tasks (
       id uuid PRIMARY KEY,
       state text NOT NULL CHECK (state IN ('queued', 'processing', 'completed', 'failed')),
@@ -106,10 +55,6 @@ export async function checkRuntimeReadiness(): Promise<boolean> {
   } finally {
     if (timeout) clearTimeout(timeout);
   }
-}
-
-function transactionDb(client: PoolClient): NonNullable<ConnectionOptions['db']> {
-  return { executeSql: (text, values) => client.query(text, values) };
 }
 
 function toTask(row: Record<string, unknown>): SmokeTask {

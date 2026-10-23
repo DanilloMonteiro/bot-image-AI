@@ -31,7 +31,12 @@ export function isPublicStoryPath(
   pathname: string,
   environment: GateEnvironment = process.env,
 ): boolean {
-  if (pathname === '/api/health' || pathname === '/api/internal/smoke' || SMOKE_TASK_PATH.test(pathname)) {
+  if (
+    pathname === '/api/health'
+    || pathname === '/api/internal/smoke'
+    || pathname === '/api/internal/budget/trace'
+    || SMOKE_TASK_PATH.test(pathname)
+  ) {
     return true;
   }
   return /^\/api\/(?:customer|customers|media)(?:\/|$)/i.test(pathname)

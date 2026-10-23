@@ -1,7 +1,7 @@
 ---
 title: "Configurar e validar o ambiente de produção no Railway"
 ticket: 1
-status: built
+status: done
 baseline_revision: 5d302d56911ce66b904fcfe604c749664d8d7712
 context:
   - docs/platform-staging.md

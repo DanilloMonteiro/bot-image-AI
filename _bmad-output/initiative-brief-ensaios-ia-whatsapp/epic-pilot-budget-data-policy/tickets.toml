@@ -4,15 +4,13 @@ next_id = 10
 id = 1
 type = "story"
 title = "Percorrer o tracer sintético até uma reserva Budget"
-description = "Reutiliza a aplicação, o worker e o fluxo durável do Epic 1 para percorrer um evento sintético até uma reserva mínima de Budget por uma porta provisória; não reimplementa CI ou infraestrutura nem habilita tráfego de cliente, WhatsApp real ou fotos."
+description = "Reutiliza a aplicação, o worker e o fluxo durável já entregues pela story 1.6 para percorrer um evento sintético até uma reserva mínima de Budget por uma porta provisória; não reimplementa CI ou infraestrutura nem habilita tráfego de cliente, WhatsApp real ou fotos."
 verify = "No ambiente de produção sintético, repetir o mesmo evento cria um único job durável e uma única reserva mínima, sem acessar rotas de cliente ou mídia."
 covers = ["CAP-7"]
-after = ["1.6"]
-unknown = "O workspace Railway ainda não está conectado; confirmar acesso, autorização e configuração efetiva antes de validar a implantação em produção."
 hitl = true
 risk = "high"
 references = ["../architecture-ensaios-ia-whatsapp/architecture-ensaios-ia-whatsapp.md#ad-3", "../architecture-ensaios-ia-whatsapp/architecture-ensaios-ia-whatsapp.md#ad-6", "../architecture-ensaios-ia-whatsapp/architecture-ensaios-ia-whatsapp.md#ad-8"]
-notes = ["Verificação externa: conferir acesso ao workspace Railway, HTTPS, app/worker e custo estimado de hospedagem; manter dados pessoais e tráfego real desativados."]
+notes = ["Acesso ao workspace e aplicação web/worker em produção confirmados em 2026-10-23; a story 1.6 já entregou a infraestrutura consumida por este tracer. A validação usa somente dados sintéticos. A reconciliação de custo e os gates de cliente/foto seguem pendentes, sem bloquear o desenvolvimento do Epic 2."]
 
 [[entry]]
 id = 2

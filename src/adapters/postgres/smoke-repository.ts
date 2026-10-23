@@ -4,6 +4,8 @@ import { PgBoss, type ConnectionOptions } from 'pg-boss';
 import type { SmokeRepository, SmokeRetryResult, SmokeTask } from '../../modules/platform-smoke/repository.js';
 
 export const SMOKE_QUEUE = 'platform-smoke';
+const READINESS_QUERY_TIMEOUT_MS = 1_500;
+const READINESS_CHECK_TIMEOUT_MS = 2_000;
 
 function databaseUrl(): string {
   const url = process.env.DATABASE_URL;
@@ -85,12 +87,24 @@ export function ensureReady(): Promise<void> {
 }
 
 export async function checkRuntimeReadiness(): Promise<boolean> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
-    await ensureReady();
-    await getPool().query('SELECT 1');
-    return (await getBoss().getQueues([SMOKE_QUEUE])).length === 1;
+    const check = async (): Promise<boolean> => {
+      await ensureReady();
+      const readinessQuery = { text: 'SELECT 1', query_timeout: READINESS_QUERY_TIMEOUT_MS };
+      await getPool().query(readinessQuery);
+      return (await getBoss().getQueues([SMOKE_QUEUE])).length === 1;
+    };
+    return await Promise.race([
+      check(),
+      new Promise<boolean>((resolve) => {
+        timeout = setTimeout(() => resolve(false), READINESS_CHECK_TIMEOUT_MS);
+      }),
+    ]);
   } catch {
     return false;
+  } finally {
+    if (timeout) clearTimeout(timeout);
   }
 }
 

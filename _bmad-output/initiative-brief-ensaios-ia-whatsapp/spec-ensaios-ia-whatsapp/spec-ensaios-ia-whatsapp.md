@@ -74,10 +74,13 @@ No piloto, pelo menos 90% das conversas de teste concluem a compra sem comandos,
 
 - [ASSUMPTION] O painel dos sócios busca WCAG 2.2 AA, teclado/foco visível e reflow em 320 CSS px. Confirmar dispositivo prioritário e breakpoints antes do handoff de layout.
 
+## Decisions
+
+- Decisão do proprietário em 2026-10-25, registrada na story 2.2 do Epic 2: AbacatePay para Pix; Google Vertex AI Gemini 3.8 Flash em multi-região nos EUA para conversa e Nano Banana 2.1 no endpoint global para imagens; incluir a Plataforma WhatsApp Business oficial/Meta na política. Foram aprovados 7 dias para fotos após entrega e para conversa/prova mínima de consentimento após encerramento. Cópias/retenção do Google, incluindo processamento global de imagens, foram aceitas; os prazos dos endpoints efetivamente usados e eventuais intermediários devem ser informados. Backups PostgreSQL da Railway mantêm a configuração atual e podem conservar cópias até expirarem.
+
 ## Open Questions
 
-- Qual fornecedor de IA será usado e quais condições se aplicam a transferência, retenção, reutilização e exclusão de fotos/resultados?
-- Quais prazos, marcos iniciais, cópias, backups, exceções e etapas de exclusão valem para cada tipo de dado e fornecedor?
+- Antes de dados reais: versionar e apresentar a política; confirmar transferência internacional e criptografia; validar acesso restrito e exclusão verificável, inclusive em objetos no Bucket, dados ativos, dumps de backup e fornecedores. Não prometer exclusão de cópias do Google ou registros de transação que fornecedores/parceiros mantenham por obrigação legal/regulatória.
 - Quais preços, pacotes e limiar de margem serão aprovados antes de anunciar?
 - Qual prazo de entrega será comunicado após os testes de capacidade, e quais critérios visuais e limite de tentativas serão usados?
 - Qual política de revisão, quantidade de ajustes, cancelamento e reembolso vale para resultados insatisfatórios?

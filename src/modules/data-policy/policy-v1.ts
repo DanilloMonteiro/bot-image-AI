@@ -1,0 +1,281 @@
+import type { DataPolicyV1 } from '../../contracts/data-policy/v1.js';
+
+function deepFreeze<T>(value: T): T {
+  if (typeof value === 'object' && value !== null && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
+  }
+  return value;
+}
+
+/**
+ * Owner-approved content for 2026-10-25. Operational checks deliberately remain pending,
+ * so this approval permits reading the policy but does not release real customer data.
+ */
+export const DATA_POLICY_V1 = deepFreeze({
+  version: 'v1',
+  title: 'Política de dados do piloto',
+  effectiveDate: '2026-10-25',
+  summary: 'Política v1 aprovada pelo proprietário em 2026-10-25. A aprovação registra os tratamentos e prazos informativos abaixo; não libera dados reais enquanto transferência internacional, criptografia e exclusão verificável não forem validadas.',
+  ownerApproval: {
+    status: 'approved',
+    decidedAt: '2026-10-25',
+    approvedAt: '2026-10-25',
+  },
+  providers: [
+    {
+      id: 'whatsapp_business_platform_meta',
+      name: 'Plataforma WhatsApp Business / Meta',
+      service: 'Canal oficial de conversa, envio e recebimento de mensagens e mídia.',
+      region: 'Conforme os termos vigentes da Meta e a rota efetivamente usada; confirmar antes de dados reais.',
+      selected: true,
+      copyRetention: 'Cópias e retenção seguem os termos vigentes da Meta para a plataforma e a conta utilizadas; a exclusão local não apaga cópias do provedor.',
+      deletion: 'Fora do controle de exclusão da aplicação; qualquer pedido ao provedor e seu resultado devem seguir os termos vigentes e ser registrados, sem prometer remoção externa.',
+    },
+    {
+      id: 'whatsapp_bsp_if_used',
+      name: 'Intermediário/BSP de WhatsApp, se usado',
+      service: 'Intermediação do canal, apenas se um BSP for efetivamente escolhido.',
+      region: 'Não definido; registrar o intermediário, a rota e a região antes de qualquer uso de dados reais.',
+      selected: false,
+      copyRetention: 'Nenhum intermediário foi escolhido nesta versão. Se um BSP for usado, informar seus termos, cópias e retenção na política consumida pela cliente.',
+      deletion: 'Não definido enquanto nenhum intermediário for escolhido; a exclusão local não será tratada como exclusão de cópias externas.',
+    },
+    {
+      id: 'google_vertex_gemini_3_8_flash',
+      name: 'Google Vertex AI — Gemini 3.8 Flash',
+      service: 'Interpretação e geração de respostas de conversa em serviço pago.',
+      region: 'Multi-região nos Estados Unidos.',
+      selected: true,
+      copyRetention: 'Cópias e retenção seguem os termos atuais do serviço pago e do endpoint efetivamente usado. O proprietário aceitou esses termos; os prazos concretos devem ser informados antes do uso real.',
+      deletion: 'A exclusão ativa da aplicação não apaga cópias mantidas pelo Google; não há promessa de exclusão externa além do que os termos do serviço permitirem.',
+    },
+    {
+      id: 'google_nano_banana_2_1',
+      name: 'Google Nano Banana 2.1',
+      service: 'Geração de imagens por endpoint global.',
+      region: 'Endpoint global; a localização de cada processamento pode variar conforme o serviço.',
+      selected: true,
+      copyRetention: 'Cópias e retenção seguem os termos atuais do serviço pago e do endpoint global. O proprietário aceitou o processamento global e os termos de cópias do Google; confirmar os detalhes do endpoint antes do uso real.',
+      deletion: 'A exclusão ativa da aplicação não apaga cópias mantidas pelo Google; não há promessa de exclusão externa além do que os termos do serviço permitirem.',
+    },
+    {
+      id: 'abacatepay_pix',
+      name: 'AbacatePay',
+      service: 'Processamento de pagamentos Pix.',
+      region: 'Conforme os termos atuais da AbacatePay e de eventuais parceiros de pagamento.',
+      selected: true,
+      copyRetention: 'A AbacatePay e seus parceiros podem manter registros de transação por prazo maior quando exigido por lei ou regulação; o prazo concreto segue os termos vigentes.',
+      deletion: 'A exclusão da aplicação não remove registros que a AbacatePay ou seus parceiros precisem manter por obrigação legal ou regulatória.',
+    },
+    {
+      id: 'railway_application_database_and_bucket',
+      name: 'Railway — aplicação, PostgreSQL, Bucket privado e backup',
+      service: 'Hospedagem da aplicação e worker, banco PostgreSQL, Bucket privado de mídia e dumps lógicos.',
+      region: 'Conforme a configuração Railway já existente; Bucket privado em IAD. Confirmar a localização de cada serviço antes de dados reais.',
+      selected: true,
+      copyRetention: 'Dumps PostgreSQL seguem a configuração atual: pg_dump a cada 3 dias e retenção de 6 dias. Cópias de texto já incluídas em dumps podem sobreviver à exclusão ativa até o dump expirar.',
+      deletion: 'A aplicação/worker deve expurgar as cópias ativas; dumps existentes expiram conforme a retenção atual. O Bucket de mídia não tem lifecycle, então a aplicação/worker é responsável pela exclusão ativa de objetos.',
+    },
+  ],
+  dataSets: [
+    {
+      id: 'whatsapp_conversation',
+      dataTypes: ['messages_and_conversation_metadata'],
+      purposes: ['Atender a cliente, interpretar mensagens, responder dúvidas e dar suporte e avaliar o serviço.'],
+      providers: [
+        'whatsapp_business_platform_meta',
+        'whatsapp_bsp_if_used',
+        'google_vertex_gemini_3_8_flash',
+        'railway_application_database_and_bucket',
+      ],
+      access: ['application_and_worker', 'two_administrator_partners', 'provider_under_its_current_terms'],
+      locations: [
+        'Aplicação e PostgreSQL Railway conforme a configuração existente.',
+        'Google Vertex AI em multi-região nos Estados Unidos.',
+        'Meta e eventual BSP conforme a rota e os termos vigentes.',
+      ],
+      transfer: {
+        status: 'pending',
+        destinations: ['Estados Unidos — Google Vertex AI e infraestrutura Railway, conforme região do serviço.', 'Meta e eventual intermediário — localização conforme termos e rota concretos.'],
+        note: 'A transferência internacional e os locais concretos ainda precisam ser validados antes de dados reais.',
+      },
+      retention: {
+        applicationDays: 7,
+        applicationStartsAt: 'Encerramento da conversa.',
+        applicationExpiryAction: 'Expurgar a conversa local no primeiro processamento possível após o prazo.',
+        providerCopies: 'Cópias Meta/Google/BSP seguem os termos vigentes de cada fornecedor e podem ter outros prazos; o expurgo local não as apaga.',
+        backupDays: 6,
+        backupStartsAt: 'Geração de cada dump pg_dump, executado a cada 3 dias.',
+        backupCopies: 'Dumps PostgreSQL gerados a cada 3 dias podem conservar cópias de texto por até 6 dias de retenção do dump; uma cópia pode sobreviver à expiração ativa até o dump expirar.',
+      },
+      deletion: {
+        activeCopies: 'Expurgo local no primeiro processamento possível após 7 dias do encerramento da conversa; a exclusão verificável ainda precisa ser validada.',
+        providerCopies: 'Não controladas pela aplicação; sem promessa de exclusão externa. Seguir os termos e registrar qualquer solicitação e evidência disponível.',
+        backupCopies: 'Não apagadas pelo expurgo ativo; dumps existentes expiram pela configuração atual de 6 dias.',
+      },
+      exceptions: ['Dumps Railway já gerados podem manter texto até expirarem, mesmo após a exclusão ativa.'],
+    },
+    {
+      id: 'consent_evidence',
+      dataTypes: ['minimal_consent_evidence'],
+      purposes: ['Comprovar a autorização da cliente ligada à conversa, finalidade, versão da política e horário.'],
+      providers: ['whatsapp_business_platform_meta', 'whatsapp_bsp_if_used', 'railway_application_database_and_bucket'],
+      access: ['application_and_worker', 'two_administrator_partners', 'provider_under_its_current_terms'],
+      locations: [
+        'Aplicação e PostgreSQL Railway conforme a configuração existente.',
+        'Meta e eventual BSP conforme a rota e os termos vigentes.',
+      ],
+      transfer: {
+        status: 'pending',
+        destinations: ['Meta e eventual intermediário — localização conforme termos e rota concretos.', 'Região do PostgreSQL Railway conforme configuração atual.'],
+        note: 'A transferência e a localização de cada cópia ainda precisam ser validadas antes de dados reais.',
+      },
+      retention: {
+        applicationDays: 7,
+        applicationStartsAt: 'Encerramento da conversa.',
+        applicationExpiryAction: 'Expurgar a prova mínima local no primeiro processamento possível após o prazo.',
+        providerCopies: 'Cópias Meta/BSP seguem os termos vigentes de cada fornecedor; o expurgo local não as apaga.',
+        backupDays: 6,
+        backupStartsAt: 'Geração de cada dump pg_dump, executado a cada 3 dias.',
+        backupCopies: 'Dumps PostgreSQL gerados a cada 3 dias podem conservar a prova mínima por até 6 dias de retenção do dump e até sua expiração.',
+      },
+      deletion: {
+        activeCopies: 'Expurgo local no primeiro processamento possível após 7 dias do encerramento da conversa; a exclusão verificável ainda precisa ser validada.',
+        providerCopies: 'Não controladas pela aplicação; sem promessa de exclusão externa. Seguir os termos e registrar qualquer solicitação e evidência disponível.',
+        backupCopies: 'Não apagadas pelo expurgo ativo; dumps existentes expiram pela configuração atual de 6 dias.',
+      },
+      exceptions: ['A prova é mínima e vinculada à conversa; não inclui cópia de documento ou dado desnecessário.', 'Dumps Railway já gerados podem manter a prova até expirarem.'],
+    },
+    {
+      id: 'source_image',
+      dataTypes: ['source_photos'],
+      purposes: ['Gerar o ensaio solicitado e permitir suporte e avaliação do serviço no painel.'],
+      providers: [
+        'whatsapp_business_platform_meta',
+        'whatsapp_bsp_if_used',
+        'google_nano_banana_2_1',
+        'railway_application_database_and_bucket',
+      ],
+      access: ['application_and_worker', 'two_administrator_partners', 'provider_under_its_current_terms'],
+      locations: [
+        'Bucket Railway privado em IAD; sem lifecycle automático.',
+        'Google Nano Banana 2.1 em endpoint global.',
+        'Meta e eventual BSP conforme a rota e os termos vigentes.',
+      ],
+      transfer: {
+        status: 'pending',
+        destinations: ['Endpoint global do Google Nano Banana 2.1.', 'Bucket Railway privado em IAD, Estados Unidos.', 'Meta e eventual intermediário conforme termos e rota concretos.'],
+        note: 'A transferência internacional, a criptografia e os locais concretos precisam ser validados antes de fotos reais.',
+      },
+      retention: {
+        applicationDays: 7,
+        applicationStartsAt: 'Entrega do resultado à cliente.',
+        applicationExpiryAction: 'Apagar o original no primeiro processamento possível após o prazo; a aplicação/worker executa a exclusão porque o Bucket não tem lifecycle.',
+        providerCopies: 'Google, Meta e eventual BSP mantêm cópias segundo seus termos vigentes; o proprietário aceitou cópias/termos do Google, sem promessa de exclusão externa.',
+        backupDays: null,
+        backupStartsAt: 'Não se aplica: mídia no Bucket privado não entra nos dumps PostgreSQL.',
+        backupCopies: 'A política de dumps PostgreSQL aplica-se a cópias de texto e consentimento; mídia no Bucket não é apagada por dump PostgreSQL.',
+      },
+      deletion: {
+        activeCopies: 'Apagar o objeto privado no primeiro processamento possível após 7 dias da entrega; confirmar exclusão verificável antes de dados reais.',
+        providerCopies: 'A exclusão local não remove cópias Google/Meta/BSP. Solicitação externa apenas quando suportada, registrando estado e evidência sem declarar apagamento sem confirmação.',
+        backupCopies: 'Dumps PostgreSQL não substituem a exclusão de objetos; o Bucket não oferece lifecycle.',
+      },
+      exceptions: ['Publicidade, portfólio e treinamento não são finalidades aprovadas; cada uso exige consentimento separado.'],
+    },
+    {
+      id: 'generated_result',
+      dataTypes: ['generated_images'],
+      purposes: ['Entregar o ensaio solicitado e permitir suporte e avaliação do serviço no painel.'],
+      providers: ['google_nano_banana_2_1', 'railway_application_database_and_bucket', 'whatsapp_business_platform_meta'],
+      access: ['application_and_worker', 'two_administrator_partners', 'provider_under_its_current_terms'],
+      locations: [
+        'Bucket Railway privado em IAD; sem lifecycle automático.',
+        'Google Nano Banana 2.1 em endpoint global.',
+        'Meta conforme a rota e os termos vigentes para entrega no WhatsApp.',
+      ],
+      transfer: {
+        status: 'pending',
+        destinations: ['Endpoint global do Google Nano Banana 2.1.', 'Bucket Railway privado em IAD, Estados Unidos.', 'Meta conforme termos e rota concretos.'],
+        note: 'A transferência internacional, a criptografia e os locais concretos precisam ser validados antes de resultados reais.',
+      },
+      retention: {
+        applicationDays: 7,
+        applicationStartsAt: 'Entrega do resultado à cliente.',
+        applicationExpiryAction: 'Apagar o resultado no primeiro processamento possível após o prazo; a aplicação/worker executa a exclusão porque o Bucket não tem lifecycle.',
+        providerCopies: 'Google/Meta mantêm cópias conforme os termos vigentes; o proprietário aceitou cópias/termos do Google, sem promessa de exclusão externa.',
+        backupDays: null,
+        backupStartsAt: 'Não se aplica: mídia no Bucket privado não entra nos dumps PostgreSQL.',
+        backupCopies: 'A política de dumps PostgreSQL aplica-se a cópias de texto e consentimento; mídia no Bucket não é apagada por dump PostgreSQL.',
+      },
+      deletion: {
+        activeCopies: 'Apagar o objeto privado no primeiro processamento possível após 7 dias da entrega; confirmar exclusão verificável antes de dados reais.',
+        providerCopies: 'A exclusão local não remove cópias Google/Meta. Solicitação externa apenas quando suportada, registrando estado e evidência sem declarar apagamento sem confirmação.',
+        backupCopies: 'Dumps PostgreSQL não substituem a exclusão de objetos; o Bucket não oferece lifecycle.',
+      },
+      exceptions: ['Publicidade, portfólio e treinamento não são finalidades aprovadas; cada uso exige consentimento separado.'],
+    },
+    {
+      id: 'payment_records',
+      dataTypes: ['pix_transaction_records'],
+      purposes: ['Processar e conciliar o pagamento Pix e manter os registros necessários de transação.'],
+      providers: ['abacatepay_pix'],
+      access: ['provider_under_its_current_terms'],
+      locations: ['AbacatePay e parceiros conforme termos e região do serviço efetivamente usado.'],
+      transfer: {
+        status: 'pending',
+        destinations: ['AbacatePay e eventuais parceiros; região conforme termos e rota concretos.'],
+        note: 'Confirmar a rota, a localização, os termos e as obrigações aplicáveis antes de pagamentos reais.',
+      },
+      retention: {
+        applicationDays: null,
+        applicationStartsAt: 'Sem retenção local aprovada nesta versão; definir os campos e o ciclo antes da integração.',
+        applicationExpiryAction: 'A duração dos registros no provedor segue os termos atuais e obrigações legais/regulatórias da AbacatePay e de seus parceiros.',
+        providerCopies: 'AbacatePay e parceiros podem manter registros por períodos legais/regulatórios; a aplicação não define nem encurta esse prazo.',
+        backupDays: null,
+        backupStartsAt: 'Não definida; confirmar se algum campo Pix será persistido localmente antes da integração.',
+        backupCopies: 'Esta política não define cópias de dados de pagamento em dump PostgreSQL; confirmar quais campos serão persistidos antes da integração.',
+      },
+      deletion: {
+        activeCopies: 'Esta versão não aprova retenção local de registro Pix; definir os campos e o ciclo local antes da integração.',
+        providerCopies: 'Não controladas pela aplicação e não removidas pelo expurgo local; seguir obrigações legais/regulatórias e termos vigentes.',
+        backupCopies: 'Não definida para uma cópia local inexistente; rever se a integração passar a persistir dados de pagamento.',
+      },
+      exceptions: ['Registros legais/regulatórios da AbacatePay e de parceiros podem durar mais que as retenções ativas da aplicação.'],
+    },
+    {
+      id: 'railway_backup_copy',
+      dataTypes: ['messages_and_conversation_metadata', 'minimal_consent_evidence'],
+      purposes: ['Recuperação PostgreSQL do piloto conforme a configuração de backup existente.'],
+      providers: ['railway_application_database_and_bucket'],
+      access: ['railway_workspace_owners_for_backup_operations', 'provider_under_its_current_terms'],
+      locations: ['Bucket privado de backup PostgreSQL Railway em IAD, Estados Unidos.'],
+      transfer: {
+        status: 'pending',
+        destinations: ['Bucket privado Railway em IAD, Estados Unidos.'],
+        note: 'A transferência internacional, a criptografia e a exclusão verificável dos dumps precisam ser validadas antes de dados reais.',
+      },
+      retention: {
+        applicationDays: null,
+        applicationStartsAt: 'Não se aplica: esta é uma cópia de backup, não uma cópia ativa da aplicação.',
+        applicationExpiryAction: 'Não se aplica à cópia ativa; o dump expira conforme a configuração Railway já existente.',
+        providerCopies: 'Railway armazena a cópia de recuperação no Bucket privado conforme configuração atual.',
+        backupDays: 6,
+        backupStartsAt: 'Criação de cada dump pg_dump, executado a cada 3 dias.',
+        backupCopies: 'Esta é a cópia de backup: retenção de 6 dias a partir da geração; dumps existentes podem conservar texto depois da exclusão ativa até expirarem.',
+      },
+      deletion: {
+        activeCopies: 'Expirar cada dump conforme a retenção configurada de 6 dias.',
+        providerCopies: 'A expiração segue a configuração atual da Railway; não afirmar remoção antes de verificar a expiração.',
+        backupCopies: 'Dumps já gerados não são editados pelo expurgo ativo; expiram pelo ciclo de retenção de 6 dias.',
+      },
+      exceptions: ['Manter a configuração existente de pg_dump a cada 3 dias e retenção de 6 dias; não mudar Railway.', 'Dumps podem conservar cópias de texto até expirarem.'],
+    },
+  ],
+  operationalReadiness: {
+    international_transfer: 'pending',
+    encryption: 'pending',
+    verifiable_deletion: 'pending',
+  },
+} as const satisfies DataPolicyV1);

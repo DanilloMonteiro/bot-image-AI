@@ -3,7 +3,7 @@ title: 'Percorrer o tracer sintético até uma reserva Budget'
 type: 'feature'
 ticket: '1'
 created: '2026-10-23'
-status: 'complete'
+status: done
 baseline_revision: 'b01f7e3dddbc9e8a1734146b39b867189473dc1b'
 route: 'full'
 route_source: 'auto'

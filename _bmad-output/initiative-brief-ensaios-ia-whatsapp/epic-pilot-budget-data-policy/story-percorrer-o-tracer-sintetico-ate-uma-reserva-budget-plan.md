@@ -3,7 +3,7 @@ title: 'Percorrer o tracer sintético até uma reserva Budget'
 type: 'feature'
 ticket: '1'
 created: '2026-10-23'
-status: 'in-progress'
+status: 'complete'
 baseline_revision: 'b01f7e3dddbc9e8a1734146b39b867189473dc1b'
 route: 'full'
 route_source: 'auto'
@@ -80,7 +80,8 @@ This is a synthetic idempotency sentinel, not an estimate of provider spend or a
 
 - 2026-10-23: Resolved the minimum reservation as R$0.01 in a synthetic-only category excluded from real pilot caps; implementation started.
 - 2026-10-23: Added the idempotent Budget trace route, transactional reservation/job persistence, and worker consumer; verification remains pending.
-- 2026-10-23: Added unit and isolated Compose acceptance coverage. Build/tests (35), module boundaries, and platform isolation passed; Compose execution was blocked because Docker Desktop is unavailable. Production route still returns 404 because this change is not deployed.
+- 2026-10-23: Added unit and isolated Compose acceptance coverage. Build/tests (35), module boundaries, and platform isolation passed; the local Compose attempt was blocked because Docker Desktop was unavailable, so production verification followed after release.
+- 2026-10-23: PR #16 merged and Railway web/worker deployed at `3e0bb4728ff6a1bc4feca6db38d244f8b7237d8b`. Three concurrent production replays returned the same reservation; PostgreSQL confirmed one reservation and one completed pg-boss job. Story accepted.
 
 ## Review Triage Log
 
@@ -95,7 +96,8 @@ Keep the current platform-smoke endpoint separate from the Budget trace. The req
 - `npm test` — expected: all unit and isolation checks pass.
 - `npm run smoke:local` — expected: repeated synthetic key leaves one reservation and one durable job in the isolated Compose database.
 
-**Execution evidence:** `npm test` passed (build and 35 tests); `npm run check:boundaries`, `npm run check:platform-isolation`, and `rtk git diff --check` passed. `npm run smoke:local` could not start because the Docker Desktop engine pipe was unavailable. A read-only production request to `/api/internal/budget/trace` returned 404, confirming this code is not deployed there. Production acceptance verification remains pending.
+**Execution evidence:** `npm test` passed (build and 35 tests); `npm run check:boundaries`, `npm run check:platform-isolation`, and `rtk git diff --check` passed. GitHub Actions passed `npm run smoke:local` with PostgreSQL/pg-boss and backup/restore; the local Docker engine was unavailable. In production, three concurrent POSTs with one UUID returned identical `202` responses and `Cache-Control: no-store`. A read-only query confirmed one `R$0.01` BRL `synthetic_trace` reservation and exactly one completed `budget-trace` job for that action ID.
 
 **Manual checks:**
-- After release to the synthetic production environment, repeat one UUID key and confirm one reservation/job; verify customer/media routes remain blocked. Do not expose or store the bearer secret in source or logs.
+- Production web health returned 200; `/api/customer/profile` and `/api/media/photo` remained 404. The budget trace path was present (GET returned 405 as expected for its POST-only route).
+- No provider or customer-data paths were called.

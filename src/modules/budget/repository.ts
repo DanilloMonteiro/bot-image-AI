@@ -5,6 +5,9 @@ import type {
   BudgetOpeningBalanceWriteResultV1,
   BudgetReconciliationV1,
   BudgetReconciliationWriteResultV1,
+  BudgetSignalResumeRequestV1,
+  BudgetSignalResumeResultV1,
+  BudgetSignalV1,
   BudgetReservationDecisionRequestV1,
   BudgetReservationDecisionWriteResultV1,
   BudgetReservationRequestV1,
@@ -33,4 +36,7 @@ export interface BudgetRepository {
     reconciliation: BudgetOpeningBalanceReconciliationV1,
   ): Promise<BudgetOpeningBalanceWriteResultV1>;
   readBudgetLedgerSnapshot(): Promise<BudgetLedgerSnapshotV1>;
+  recordBudgetSignal(signal: BudgetSignalV1, recoveryRequest?: BudgetReservationRequestV1): Promise<BudgetSignalV1>;
+  listBudgetSignals(): Promise<BudgetSignalV1[]>;
+  resumeBudgetSignal(request: BudgetSignalResumeRequestV1): Promise<BudgetSignalResumeResultV1>;
 }

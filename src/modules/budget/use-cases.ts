@@ -5,6 +5,8 @@ import {
   isBudgetReconciliationV1,
   isBudgetReservationDecisionRequestV1,
   isBudgetReservationRequestV1,
+  isBudgetSignalResumeRequestV1,
+  isBudgetSignalV1,
   type BudgetExposureV1,
   type BudgetLedgerSnapshotV1,
   type BudgetOpeningBalanceReconciliationV1,
@@ -16,8 +18,10 @@ import {
   type BudgetReservationDecisionResultV1,
   type BudgetReservationRequestV1,
   type BudgetReservationResultV1,
+  type BudgetSignalResumeRequestV1,
+  type BudgetSignalResumeResultV1,
+  type BudgetSignalV1,
 } from '../../contracts/budget/v1';
-import { reservationTotalMinor } from './limits';
 import { projectBudgetSnapshot } from './snapshot';
 
 export type BudgetAdminVerifier = (actorId: string) => boolean | Promise<boolean>;
@@ -45,17 +49,19 @@ export class Budget {
 
   reserveAction(request: BudgetReservationRequestV1): Promise<BudgetReservationResultV1> {
     if (!isBudgetReservationRequestV1(request)) throw new Error('invalid_budget_reservation_request');
-    if (request.cost.status !== 'known'
-      || request.cost.currency !== 'BRL'
-      || reservationTotalMinor(request.cost.amountMinor, request.attemptLimit) === null) {
-      return Promise.resolve({
-        version: 'v1',
-        actionId: request.actionId,
-        status: 'blocked',
-        reason: 'unknown_cost',
-      });
-    }
     return this.repository.reserveAction(request);
+  }
+
+  recordSignal(signal: BudgetSignalV1): Promise<BudgetSignalV1> {
+    if (!isBudgetSignalV1(signal) || signal.status !== 'open' || signal.attempts !== 0) {
+      throw new Error('invalid_budget_signal');
+    }
+    return this.repository.recordBudgetSignal(signal);
+  }
+
+  resumeSignal(request: BudgetSignalResumeRequestV1): Promise<BudgetSignalResumeResultV1> {
+    if (!isBudgetSignalResumeRequestV1(request)) throw new Error('invalid_budget_signal_resume_request');
+    return this.repository.resumeBudgetSignal(request);
   }
 
   recordExposure(exposure: BudgetExposureV1): Promise<'recorded' | 'already_recorded'> {
@@ -105,7 +111,8 @@ export class Budget {
 
   async readBudgetSnapshot(): Promise<BudgetReadSnapshotV1> {
     const ledgerSnapshot: BudgetLedgerSnapshotV1 = await this.repository.readBudgetLedgerSnapshot();
-    return projectBudgetSnapshot(ledgerSnapshot);
+    const signals = await this.repository.listBudgetSignals();
+    return projectBudgetSnapshot(ledgerSnapshot, signals);
   }
 }
 

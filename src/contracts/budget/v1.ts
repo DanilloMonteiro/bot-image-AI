@@ -176,6 +176,7 @@ export type BudgetIllustrativeEconomicsV1 = typeof BUDGET_ILLUSTRATIVE_ECONOMICS
 export type BudgetReadSnapshotV1 = BudgetLedgerSnapshotV1 & {
   alerts: BudgetThresholdAlertV1[];
   blockers: BudgetSnapshotBlockerV1[];
+  signals: BudgetSignalV1[];
   illustrativeEconomics: BudgetIllustrativeEconomicsV1;
 };
 
@@ -190,6 +191,41 @@ export type BudgetSignalV1 = {
   status: 'open' | 'acknowledged' | 'resolved';
   occurredAt: string;
 };
+
+export type BudgetSignalResumeRequestV1 = {
+  version: typeof BUDGET_CONTRACT_VERSION;
+  resumeId: string;
+  signalId: string;
+};
+
+export type BudgetSignalResumeResultV1 =
+  | {
+    version: typeof BUDGET_CONTRACT_VERSION;
+    resumeId: string;
+    signalId: string;
+    status: 'reservation_retried';
+    reservation: Extract<BudgetReservationResultV1, { status: 'reserved' | 'already_reserved' }>;
+  }
+  | {
+    version: typeof BUDGET_CONTRACT_VERSION;
+    resumeId: string;
+    signalId: string;
+    status: 'reservation_blocked';
+    reservation: Extract<BudgetReservationResultV1, { status: 'blocked' }>;
+  }
+  | {
+    version: typeof BUDGET_CONTRACT_VERSION;
+    resumeId: string;
+    signalId: string;
+    status: 'manual_action_required';
+    reason: BudgetSignalKindV1;
+  }
+  | {
+    version: typeof BUDGET_CONTRACT_VERSION;
+    resumeId: string;
+    signalId: string;
+    status: 'already_resolved';
+  };
 
 /** References to evidence records only; never store customer content or provider secrets here. */
 export type BudgetReconciliationEvidenceV1 = {
@@ -482,14 +518,17 @@ export function isBudgetLedgerSnapshotV1(value: unknown): value is BudgetLedgerS
 export function isBudgetReadSnapshotV1(value: unknown): value is BudgetReadSnapshotV1 {
   return isObject(value)
     && hasOnlyKeys(value, [
-      'version', 'generatedAt', 'total', 'categories', 'alerts', 'blockers', 'illustrativeEconomics',
+      'version', 'generatedAt', 'total', 'categories', 'alerts', 'blockers', 'signals', 'illustrativeEconomics',
     ])
     && hasOwnKeys(value, [
-      'version', 'generatedAt', 'total', 'categories', 'alerts', 'blockers', 'illustrativeEconomics',
+      'version', 'generatedAt', 'total', 'categories', 'alerts', 'blockers', 'signals', 'illustrativeEconomics',
     ])
     && isBudgetLedgerSnapshotShape(value)
     && isBudgetThresholdAlerts(value.alerts)
     && isBudgetSnapshotBlockers(value.blockers)
+    && Array.isArray(value.signals)
+    && value.signals.every(isBudgetSignalV1)
+    && new Set(value.signals.map((signal) => (signal as BudgetSignalV1).signalId)).size === value.signals.length
     && isBudgetIllustrativeEconomicsV1(value.illustrativeEconomics);
 }
 
@@ -685,6 +724,45 @@ export function isBudgetSignalV1(value: unknown): value is BudgetSignalV1 {
     && value.attempts >= 0
     && ['open', 'acknowledged', 'resolved'].includes(String(value.status))
     && isUtcTimestamp(value.occurredAt);
+}
+
+export function isBudgetSignalResumeRequestV1(value: unknown): value is BudgetSignalResumeRequestV1 {
+  return isObject(value)
+    && hasOnlyKeys(value, ['version', 'resumeId', 'signalId'])
+    && hasOwnKeys(value, ['version', 'resumeId', 'signalId'])
+    && value.version === BUDGET_CONTRACT_VERSION
+    && isIdentifier(value.resumeId)
+    && isIdentifier(value.signalId);
+}
+
+export function isBudgetSignalResumeResultV1(value: unknown): value is BudgetSignalResumeResultV1 {
+  if (!isObject(value)
+    || value.version !== BUDGET_CONTRACT_VERSION
+    || !isIdentifier(value.resumeId)
+    || !isIdentifier(value.signalId)) return false;
+
+  if (value.status === 'reservation_retried') {
+    return hasOnlyKeys(value, ['version', 'resumeId', 'signalId', 'status', 'reservation'])
+      && hasOwnKeys(value, ['version', 'resumeId', 'signalId', 'status', 'reservation'])
+      && isBudgetReservationResultV1(value.reservation)
+      && (value.reservation.status === 'reserved' || value.reservation.status === 'already_reserved')
+      && value.reservation.actionId.length > 0;
+  }
+  if (value.status === 'reservation_blocked') {
+    return hasOnlyKeys(value, ['version', 'resumeId', 'signalId', 'status', 'reservation'])
+      && hasOwnKeys(value, ['version', 'resumeId', 'signalId', 'status', 'reservation'])
+      && isBudgetReservationResultV1(value.reservation)
+      && value.reservation.status === 'blocked';
+  }
+  if (value.status === 'manual_action_required') {
+    return hasOnlyKeys(value, ['version', 'resumeId', 'signalId', 'status', 'reason'])
+      && hasOwnKeys(value, ['version', 'resumeId', 'signalId', 'status', 'reason'])
+      && typeof value.reason === 'string'
+      && SIGNAL_KIND_SET.has(value.reason);
+  }
+  return value.status === 'already_resolved'
+    && hasOnlyKeys(value, ['version', 'resumeId', 'signalId', 'status'])
+    && hasOwnKeys(value, ['version', 'resumeId', 'signalId', 'status']);
 }
 
 function isBudgetReconciliationEvidence(value: unknown): value is BudgetReconciliationEvidenceV1 {

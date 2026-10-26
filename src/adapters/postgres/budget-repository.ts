@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { getBoss, getPool, startBoss, transactionDb } from './runtime';
 import type { PoolClient } from 'pg';
 import type {
@@ -14,6 +15,9 @@ import {
   isBudgetReservationDecisionResultV1,
   isBudgetReservationDecisionRequestV1,
   isBudgetReservationRequestV1,
+  isBudgetSignalResumeRequestV1,
+  isBudgetSignalResumeResultV1,
+  isBudgetSignalV1,
   type BudgetAmountV1,
   type BudgetBalanceV1,
   type BudgetCappedCategoryV1,
@@ -31,6 +35,9 @@ import {
   type BudgetReservationDecisionWriteResultV1,
   type BudgetReservationRequestV1,
   type BudgetReservationResultV1,
+  type BudgetSignalResumeRequestV1,
+  type BudgetSignalResumeResultV1,
+  type BudgetSignalV1,
 } from '../../contracts/budget/v1';
 import {
   BUDGET_CATEGORY_CAPS_MINOR_V1,
@@ -39,6 +46,7 @@ import {
 } from '../../modules/budget/limits';
 
 export const BUDGET_TRACE_QUEUE = 'budget-trace';
+const BUDGET_SIGNAL_STALE_AFTER_HOURS = 24;
 
 let ready: Promise<void> | undefined;
 
@@ -120,6 +128,29 @@ export function ensureBudgetReady(): Promise<void> {
     )`);
     await getPool().query(`CREATE INDEX IF NOT EXISTS budget_reconciliations_action_idx
       ON budget_reconciliations (action_id, recorded_at)`);
+    await getPool().query(`CREATE TABLE IF NOT EXISTS budget_signals (
+      signal_id text PRIMARY KEY,
+      kind text NOT NULL CHECK (kind IN (
+        'unknown_cost', 'insufficient_balance', 'limit_reached', 'reservation_stale', 'reconciliation_required'
+      )),
+      source text NOT NULL CHECK (source IN ('reservation', 'usage', 'reconciliation', 'system')),
+      source_id text NOT NULL,
+      reason text NOT NULL,
+      attempts integer NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+      status text NOT NULL CHECK (status IN ('open', 'acknowledged', 'resolved')),
+      occurred_at timestamptz NOT NULL,
+      recovery_request jsonb,
+      UNIQUE (kind, source, source_id)
+    )`);
+    await getPool().query(`CREATE INDEX IF NOT EXISTS budget_signals_status_occurred_idx
+      ON budget_signals (status, occurred_at)`);
+    await getPool().query(`CREATE TABLE IF NOT EXISTS budget_signal_resumptions (
+      resume_id text PRIMARY KEY,
+      signal_id text NOT NULL REFERENCES budget_signals(signal_id),
+      request jsonb NOT NULL,
+      result jsonb NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now()
+    )`);
     await getPool().query(`CREATE TABLE IF NOT EXISTS budget_reservation_decisions (
       decision_id text PRIMARY KEY,
       action_id text NOT NULL,
@@ -326,6 +357,107 @@ function blockedBudgetAction(
   return { version: 'v1', actionId, status: 'blocked', reason };
 }
 
+function budgetSignalId(kind: string, source: string, sourceId: string): string {
+  const digest = createHash('sha256').update(`${kind}\u0000${source}\u0000${sourceId}`).digest('hex').slice(0, 32);
+  return `signal:${digest}`;
+}
+
+function makeBudgetSignal(
+  kind: BudgetSignalV1['kind'],
+  source: BudgetSignalV1['source'],
+  sourceId: string,
+  reason: string,
+  occurredAt = new Date().toISOString(),
+): BudgetSignalV1 {
+  return {
+    version: 'v1',
+    signalId: budgetSignalId(kind, source, sourceId),
+    kind,
+    source,
+    sourceId,
+    reason,
+    attempts: 0,
+    status: 'open',
+    occurredAt,
+  };
+}
+
+function reservationSignal(
+  request: BudgetReservationRequestV1,
+  reason: Extract<BudgetReservationResultV1, { status: 'blocked' }>['reason'],
+): BudgetSignalV1 {
+  const kind: BudgetSignalV1['kind'] = reason === 'unknown_cost'
+    ? 'unknown_cost'
+    : reason === 'category_limit'
+      ? 'limit_reached'
+      : reason === 'insufficient_balance'
+        ? 'insufficient_balance'
+        : 'reconciliation_required';
+  return makeBudgetSignal(kind, 'reservation', request.actionId, reason);
+}
+
+function toBudgetSignal(row: Record<string, unknown>): BudgetSignalV1 {
+  const occurredAt = row.occurred_at instanceof Date
+    ? row.occurred_at.toISOString()
+    : new Date(String(row.occurred_at)).toISOString();
+  const signal: BudgetSignalV1 = {
+    version: 'v1',
+    signalId: String(row.signal_id),
+    kind: String(row.kind) as BudgetSignalV1['kind'],
+    source: String(row.source) as BudgetSignalV1['source'],
+    sourceId: String(row.source_id),
+    reason: String(row.reason),
+    attempts: Number(row.attempts),
+    status: String(row.status) as BudgetSignalV1['status'],
+    occurredAt,
+  };
+  if (!isBudgetSignalV1(signal)) throw new Error('persisted_budget_signal_invalid');
+  return signal;
+}
+
+async function persistBudgetSignal(
+  client: PoolClient | ReturnType<typeof getPool>,
+  signal: BudgetSignalV1,
+  recoveryRequest?: BudgetReservationRequestV1,
+): Promise<BudgetSignalV1> {
+  if (!isBudgetSignalV1(signal)) throw new Error('invalid_budget_signal');
+  if (recoveryRequest && !isBudgetReservationRequestV1(recoveryRequest)) {
+    throw new Error('invalid_budget_signal_recovery_request');
+  }
+  if (recoveryRequest && (signal.source !== 'reservation' || signal.sourceId !== recoveryRequest.actionId)) {
+    throw new Error('budget_signal_recovery_source_mismatch');
+  }
+  const result = await client.query(
+    `INSERT INTO budget_signals (
+       signal_id, kind, source, source_id, reason, attempts, status, occurred_at, recovery_request
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
+     ON CONFLICT (kind, source, source_id) DO UPDATE SET
+       reason = EXCLUDED.reason,
+       attempts = CASE WHEN budget_signals.status = 'resolved' THEN 0 ELSE budget_signals.attempts END,
+       status = CASE WHEN budget_signals.status = 'resolved' THEN 'open' ELSE budget_signals.status END,
+       occurred_at = CASE WHEN budget_signals.status = 'resolved'
+         THEN EXCLUDED.occurred_at ELSE budget_signals.occurred_at END,
+       recovery_request = COALESCE(budget_signals.recovery_request, EXCLUDED.recovery_request)
+     WHERE EXCLUDED.recovery_request IS NULL
+        OR budget_signals.recovery_request IS NULL
+        OR budget_signals.recovery_request = EXCLUDED.recovery_request
+     RETURNING *`,
+    [
+      signal.signalId,
+      signal.kind,
+      signal.source,
+      signal.sourceId,
+      signal.reason,
+      signal.attempts,
+      signal.status,
+      signal.occurredAt,
+      recoveryRequest ? JSON.stringify(recoveryRequest) : null,
+    ],
+  );
+  if (!result.rows[0]) throw new Error('budget_action_payload_conflict');
+  return toBudgetSignal(result.rows[0] as Record<string, unknown>);
+}
+
 function blockedReservationDecision(
   request: BudgetReservationDecisionRequestV1,
   reason: BudgetDecisionBlockReasonV1,
@@ -453,6 +585,58 @@ function isSameReservation(row: Record<string, unknown>, request: BudgetReservat
     && row.currency === 'BRL';
 }
 
+async function persistReservationSignalResume(
+  client: PoolClient,
+  request: BudgetSignalResumeRequestV1,
+  reservation: BudgetReservationResultV1,
+): Promise<BudgetSignalResumeResultV1> {
+  const result: BudgetSignalResumeResultV1 = reservation.status === 'blocked'
+    ? {
+      version: 'v1', resumeId: request.resumeId, signalId: request.signalId,
+      status: 'reservation_blocked', reservation,
+    }
+    : {
+      version: 'v1', resumeId: request.resumeId, signalId: request.signalId,
+      status: 'reservation_retried', reservation,
+    };
+  const nextStatus = result.status === 'reservation_blocked' ? 'open' : 'resolved';
+  const updated = await client.query(
+    `UPDATE budget_signals
+     SET attempts = attempts + 1,
+         status = CASE WHEN status = 'resolved' THEN 'resolved' ELSE $2 END
+     WHERE signal_id = $1`,
+    [request.signalId, nextStatus],
+  );
+  if (updated.rowCount !== 1) throw new Error('budget_signal_missing');
+  await client.query(
+    `INSERT INTO budget_signal_resumptions (resume_id, signal_id, request, result)
+     VALUES ($1, $2, $3::jsonb, $4::jsonb)`,
+    [request.resumeId, request.signalId, JSON.stringify(request), JSON.stringify(result)],
+  );
+  return result;
+}
+
+async function persistAlreadyResolvedSignalResume(
+  client: PoolClient,
+  request: BudgetSignalResumeRequestV1,
+): Promise<BudgetSignalResumeResultV1> {
+  const result: BudgetSignalResumeResultV1 = {
+    version: 'v1', resumeId: request.resumeId, signalId: request.signalId,
+    status: 'already_resolved',
+  };
+  const updated = await client.query(
+    `UPDATE budget_signals SET status = 'resolved' WHERE signal_id = $1`,
+    [request.signalId],
+  );
+  if (updated.rowCount !== 1) throw new Error('budget_signal_missing');
+  await client.query(
+    `INSERT INTO budget_signal_resumptions (resume_id, signal_id, request, result)
+     VALUES ($1, $2, $3::jsonb, $4::jsonb)`,
+    [request.resumeId, request.signalId, JSON.stringify(request), JSON.stringify(result)],
+  );
+  return result;
+}
+
 export class PostgresBudgetRepository implements BudgetRepository {
   async reserveSyntheticTrace(actionId: string): Promise<BudgetReservation> {
     await ensureBudgetReady();
@@ -514,6 +698,15 @@ export class PostgresBudgetRepository implements BudgetRepository {
   }
 
   async reserveAction(request: BudgetReservationRequestV1): Promise<BudgetReservationResultV1> {
+    const result = await this.reserveActionInternal(request);
+    if (!result) throw new Error('budget_action_already_decided');
+    return result;
+  }
+
+  private async reserveActionInternal(
+    request: BudgetReservationRequestV1,
+    resumeRequest?: BudgetSignalResumeRequestV1,
+  ): Promise<BudgetReservationResultV1 | null> {
     await ensureBudgetReady();
     if (!isBudgetReservationRequestV1(request)) throw new Error('invalid_budget_reservation_request');
 
@@ -521,6 +714,26 @@ export class PostgresBudgetRepository implements BudgetRepository {
     try {
       await client.query('BEGIN');
       await lockBudgetLedger(client);
+      const priorRecoveryRequests = await client.query(
+        `SELECT recovery_request = $2::jsonb AS same
+         FROM budget_signals
+         WHERE source = 'reservation' AND source_id = $1 AND recovery_request IS NOT NULL
+         FOR UPDATE`,
+        [request.actionId, JSON.stringify(request)],
+      );
+      if (priorRecoveryRequests.rows.some((row: Record<string, unknown>) => row.same !== true)) {
+        throw new Error('budget_action_payload_conflict');
+      }
+
+      const finishBlocked = async (
+        reason: Extract<BudgetReservationResultV1, { status: 'blocked' }>['reason'],
+      ): Promise<BudgetReservationResultV1> => {
+        await persistBudgetSignal(client, reservationSignal(request, reason), request);
+        const result = blockedBudgetAction(request.actionId, reason);
+        if (resumeRequest) await persistReservationSignalResume(client, resumeRequest, result);
+        await client.query('COMMIT');
+        return result;
+      };
 
       const existingResult = await client.query(
         `SELECT * FROM budget_ledger_entries
@@ -532,36 +745,45 @@ export class PostgresBudgetRepository implements BudgetRepository {
         if (request.cost.status !== 'known' || !isSameReservation(existing, request)) {
           throw new Error('budget_action_payload_conflict');
         }
-        if (existing.reservation_status !== 'active') throw new Error('budget_action_already_decided');
-        await client.query('COMMIT');
-        return {
+        if (existing.reservation_status !== 'active') {
+          if (!resumeRequest) throw new Error('budget_action_already_decided');
+          await persistAlreadyResolvedSignalResume(client, resumeRequest);
+          await client.query('COMMIT');
+          return null;
+        }
+        await client.query(
+          `UPDATE budget_signals SET status = 'resolved'
+           WHERE source = 'reservation' AND source_id = $1
+             AND kind <> 'reservation_stale' AND status <> 'resolved'`,
+          [request.actionId],
+        );
+        const result: BudgetReservationResultV1 = {
           version: 'v1',
           actionId: request.actionId,
           status: 'already_reserved',
           reservationId: String(existing.entry_id),
         };
+        if (resumeRequest) await persistReservationSignalResume(client, resumeRequest, result);
+        await client.query('COMMIT');
+        return result;
       }
 
       if (request.cost.status !== 'known' || request.cost.currency !== 'BRL') {
-        await client.query('COMMIT');
-        return blockedBudgetAction(request.actionId, 'unknown_cost');
+        return finishBlocked('unknown_cost');
       }
       const amountMinor = reservationTotalMinor(request.cost.amountMinor, request.attemptLimit);
       if (amountMinor === null) {
-        await client.query('COMMIT');
-        return blockedBudgetAction(request.actionId, 'unknown_cost');
+        return finishBlocked('unknown_cost');
       }
 
       const ledger = await loadBudgetLedgerState(client);
       if (!ledger.allKnown) {
-        await client.query('COMMIT');
-        return blockedBudgetAction(request.actionId, 'balance_unknown');
+        return finishBlocked('balance_unknown');
       }
 
       const categoryState = ledger.categories.get(request.category);
       if (!categoryState?.known) {
-        await client.query('COMMIT');
-        return blockedBudgetAction(request.actionId, 'balance_unknown');
+        return finishBlocked('balance_unknown');
       }
       const categoryAvailable = remainingMinor(
         BUDGET_CATEGORY_CAPS_MINOR_V1[request.category],
@@ -569,16 +791,13 @@ export class PostgresBudgetRepository implements BudgetRepository {
       );
       const totalAvailable = remainingMinor(BUDGET_TOTAL_CAP_MINOR_V1, ledger.totalAmounts);
       if (categoryAvailable === null || totalAvailable === null) {
-        await client.query('COMMIT');
-        return blockedBudgetAction(request.actionId, 'balance_unknown');
+        return finishBlocked('balance_unknown');
       }
       if (amountMinor > categoryAvailable) {
-        await client.query('COMMIT');
-        return blockedBudgetAction(request.actionId, 'category_limit');
+        return finishBlocked('category_limit');
       }
       if (amountMinor > totalAvailable) {
-        await client.query('COMMIT');
-        return blockedBudgetAction(request.actionId, 'insufficient_balance');
+        return finishBlocked('insufficient_balance');
       }
 
       const reservationId = `reservation:${request.actionId}`;
@@ -599,13 +818,22 @@ export class PostgresBudgetRepository implements BudgetRepository {
       );
       if (inserted.rows.length !== 1) throw new Error('budget_reservation_idempotency_conflict');
 
-      await client.query('COMMIT');
-      return {
+      await client.query(
+        `UPDATE budget_signals SET status = 'resolved'
+         WHERE source = 'reservation' AND source_id = $1
+           AND kind <> 'reservation_stale' AND status <> 'resolved'`,
+        [request.actionId],
+      );
+
+      const result: BudgetReservationResultV1 = {
         version: 'v1',
         actionId: request.actionId,
         status: 'reserved',
         reservationId,
       };
+      if (resumeRequest) await persistReservationSignalResume(client, resumeRequest, result);
+      await client.query('COMMIT');
+      return result;
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -701,6 +929,24 @@ export class PostgresBudgetRepository implements BudgetRepository {
         ],
       );
       if (inserted.rows.length !== 1) throw new Error('budget_reconciliation_idempotency_conflict');
+
+      if (reconciliation.cost.status === 'unknown') {
+        await persistBudgetSignal(client, makeBudgetSignal(
+          'unknown_cost', 'reconciliation', reconciliation.actionId, 'reconciliation_cost_unknown',
+          reconciliation.occurredAt,
+        ));
+      } else if (reconciliation.terminality !== 'terminal') {
+        await persistBudgetSignal(client, makeBudgetSignal(
+          'reconciliation_required', 'reconciliation', reconciliation.actionId,
+          'reconciliation_not_terminal', reconciliation.occurredAt,
+        ));
+      } else {
+        await client.query(
+          `UPDATE budget_signals SET status = 'acknowledged'
+           WHERE source = 'reconciliation' AND source_id = $1 AND status = 'open'`,
+          [reconciliation.actionId],
+        );
+      }
 
       await client.query('COMMIT');
       return { version: 'v1', reconciliationId: reconciliation.reconciliationId, status: 'recorded' };
@@ -875,6 +1121,11 @@ export class PostgresBudgetRepository implements BudgetRepository {
       }
 
       await persistReservationDecision(client, request, result, true, decidedAt);
+      await client.query(
+        `UPDATE budget_signals SET status = 'resolved'
+         WHERE source_id = $1 AND status <> 'resolved'`,
+        [request.actionId],
+      );
 
       await client.query('COMMIT');
       return result;
@@ -972,6 +1223,171 @@ export class PostgresBudgetRepository implements BudgetRepository {
       throw error;
     } finally {
       client.release();
+    }
+  }
+
+  async recordBudgetSignal(
+    signal: BudgetSignalV1,
+    recoveryRequest?: BudgetReservationRequestV1,
+  ): Promise<BudgetSignalV1> {
+    await ensureBudgetReady();
+    if (!isBudgetSignalV1(signal)) throw new Error('invalid_budget_signal');
+    if (recoveryRequest && !isBudgetReservationRequestV1(recoveryRequest)) {
+      throw new Error('invalid_budget_signal_recovery_request');
+    }
+    const client = await getPool().connect();
+    try {
+      await client.query('BEGIN');
+      const persisted = await persistBudgetSignal(client, signal, recoveryRequest);
+      await client.query('COMMIT');
+      return persisted;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async listBudgetSignals(): Promise<BudgetSignalV1[]> {
+    await ensureBudgetReady();
+    const client = await getPool().connect();
+    try {
+      await client.query('BEGIN');
+      await lockBudgetLedger(client);
+      const stale = await client.query(
+        `SELECT DISTINCT reservation.action_id
+         FROM budget_ledger_entries AS reservation
+         WHERE reservation.entry_kind = 'reservation'
+           AND reservation.reservation_status = 'active'
+           AND reservation.occurred_at <= now() - interval '${BUDGET_SIGNAL_STALE_AFTER_HOURS} hours'
+           AND NOT EXISTS (
+             SELECT 1 FROM budget_reconciliations AS reconciliation
+             WHERE reconciliation.action_id = reservation.action_id
+           )`,
+      );
+      for (const row of stale.rows as Array<Record<string, unknown>>) {
+        const actionId = String(row.action_id);
+        await persistBudgetSignal(client, makeBudgetSignal(
+          'reservation_stale', 'reservation', actionId, 'reservation_active_over_24h',
+        ));
+      }
+      const result = await client.query(
+        `SELECT * FROM budget_signals WHERE status <> 'resolved'
+         ORDER BY CASE WHEN status = 'open' THEN 0 ELSE 1 END,
+                  occurred_at DESC, signal_id ASC`,
+      );
+      await client.query('COMMIT');
+      return (result.rows as Array<Record<string, unknown>>).map(toBudgetSignal);
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async resumeBudgetSignal(request: BudgetSignalResumeRequestV1): Promise<BudgetSignalResumeResultV1> {
+    await ensureBudgetReady();
+    if (!isBudgetSignalResumeRequestV1(request)) throw new Error('invalid_budget_signal_resume_request');
+    const lockClient = await getPool().connect();
+    try {
+      await lockClient.query('SELECT pg_advisory_lock(hashtext($1), 0)', [request.resumeId]);
+      const previous = await lockClient.query(
+      `SELECT request = $2::jsonb AS same, result
+       FROM budget_signal_resumptions WHERE resume_id = $1`,
+      [request.resumeId, JSON.stringify(request)],
+      );
+      if (previous.rows.length > 0) {
+        if (previous.rows[0].same !== true) throw new Error('budget_signal_resume_payload_conflict');
+        const stored = previous.rows[0].result as unknown;
+        if (!isBudgetSignalResumeResultV1(stored)) throw new Error('persisted_budget_signal_resume_invalid');
+        return stored;
+      }
+
+      const signalResult = await lockClient.query(
+      'SELECT * FROM budget_signals WHERE signal_id = $1',
+      [request.signalId],
+      );
+      const row = signalResult.rows[0] as Record<string, unknown> | undefined;
+      if (!row) throw new Error('budget_signal_missing');
+      const signal = toBudgetSignal(row);
+      let result: BudgetSignalResumeResultV1;
+      if (signal.status === 'resolved') {
+        result = {
+          version: 'v1', resumeId: request.resumeId, signalId: request.signalId,
+          status: 'already_resolved',
+        };
+      } else {
+        const recoveryRequest = row.recovery_request as unknown;
+        const canRetryReservation = isBudgetReservationRequestV1(recoveryRequest)
+          && recoveryRequest.cost.status === 'known'
+          && recoveryRequest.cost.currency === 'BRL'
+          && ['insufficient_balance', 'limit_reached', 'reconciliation_required'].includes(signal.kind);
+        if (!canRetryReservation) {
+          result = {
+            version: 'v1', resumeId: request.resumeId, signalId: request.signalId,
+            status: 'manual_action_required', reason: signal.kind,
+          };
+        } else {
+          const reservation = await this.reserveActionInternal(recoveryRequest, request);
+          if (!reservation) {
+            return {
+              version: 'v1', resumeId: request.resumeId, signalId: request.signalId,
+              status: 'already_resolved',
+            };
+          }
+          return reservation.status === 'blocked'
+            ? {
+              version: 'v1', resumeId: request.resumeId, signalId: request.signalId,
+              status: 'reservation_blocked', reservation,
+            }
+            : {
+              version: 'v1', resumeId: request.resumeId, signalId: request.signalId,
+              status: 'reservation_retried', reservation,
+            };
+        }
+      }
+
+      const client = lockClient;
+      try {
+        await client.query('BEGIN');
+        const currentSignal = await client.query(
+        'SELECT status FROM budget_signals WHERE signal_id = $1 FOR UPDATE',
+        [request.signalId],
+        );
+        if (currentSignal.rows.length !== 1) throw new Error('budget_signal_missing');
+        if (currentSignal.rows[0].status === 'resolved' && result.status !== 'already_resolved') {
+          result = {
+            version: 'v1', resumeId: request.resumeId, signalId: request.signalId, status: 'already_resolved',
+          };
+        }
+        if (!isBudgetSignalResumeResultV1(result)) throw new Error('invalid_budget_signal_resume_result');
+        const countAttempt = result.status === 'already_resolved' ? 0 : 1;
+        const nextStatus = result.status === 'already_resolved' ? 'resolved' : 'open';
+        await client.query(
+          `UPDATE budget_signals
+           SET attempts = attempts + $3, status = CASE WHEN status = 'resolved' THEN 'resolved' ELSE $2 END
+           WHERE signal_id = $1`,
+          [request.signalId, nextStatus, countAttempt],
+        );
+        await client.query(
+        `INSERT INTO budget_signal_resumptions (resume_id, signal_id, request, result)
+         VALUES ($1, $2, $3::jsonb, $4::jsonb)`,
+        [request.resumeId, request.signalId, JSON.stringify(request), JSON.stringify(result)],
+        );
+        await client.query('COMMIT');
+        return result;
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      }
+    } finally {
+      try {
+        await lockClient.query('SELECT pg_advisory_unlock(hashtext($1), 0)', [request.resumeId]);
+      } finally {
+        lockClient.release();
+      }
     }
   }
 

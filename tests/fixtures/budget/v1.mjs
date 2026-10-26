@@ -100,6 +100,7 @@ const readSnapshot = {
       kind: 'balance_unknown', scope: 'category', category, reason: 'awaiting_manual_reconciliation',
     })),
   ],
+  signals: [],
   illustrativeEconomics: {
     status: 'hypothesis',
     label: 'five_image_package',

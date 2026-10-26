@@ -3,11 +3,13 @@ import {
   BUDGET_CAPPED_CATEGORIES_V1,
   BUDGET_ILLUSTRATIVE_ECONOMICS_V1,
   isBudgetLedgerSnapshotV1,
+  isBudgetSignalV1,
   type BudgetAmountV1,
   type BudgetBalanceV1,
   type BudgetCappedCategoryV1,
   type BudgetLedgerSnapshotV1,
   type BudgetReadSnapshotV1,
+  type BudgetSignalV1,
   type BudgetSnapshotBlockerV1,
   type BudgetThresholdAlertV1,
 } from '../../contracts/budget/v1';
@@ -22,8 +24,16 @@ type KnownExposure = { status: 'known'; capMinor: number; exposureMinor: number 
 type UnknownExposure = { status: 'unknown'; reason: string };
 
 /** Builds the Operations view without changing the ledger snapshot it receives. */
-export function projectBudgetSnapshot(base: BudgetLedgerSnapshotV1): BudgetReadSnapshotV1 {
+export function projectBudgetSnapshot(
+  base: BudgetLedgerSnapshotV1,
+  signals: BudgetSignalV1[] = [],
+): BudgetReadSnapshotV1 {
   if (!isBudgetLedgerSnapshotV1(base)) throw new Error('invalid_budget_ledger_snapshot');
+  if (!signals.every((signal) => isBudgetSignalV1(signal))) throw new Error('invalid_budget_signal');
+  const activeSignals = signals.filter((signal) => signal.status !== 'resolved');
+  if (new Set(activeSignals.map((signal) => signal.signalId)).size !== activeSignals.length) {
+    throw new Error('duplicate_budget_signal');
+  }
 
   const scopes: SnapshotScope[] = [
     { scope: 'total', balance: base.total },
@@ -77,6 +87,7 @@ export function projectBudgetSnapshot(base: BudgetLedgerSnapshotV1): BudgetReadS
     ...base,
     alerts,
     blockers,
+    signals: activeSignals,
     illustrativeEconomics: BUDGET_ILLUSTRATIVE_ECONOMICS_V1,
   };
   return snapshot;

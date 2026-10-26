@@ -11,6 +11,8 @@ const {
   isBudgetReservationResultV1,
   isBudgetSnapshotBlockerV1,
   isBudgetSignalV1,
+  isBudgetSignalResumeRequestV1,
+  isBudgetSignalResumeResultV1,
   isBudgetThresholdAlertV1,
   toBudgetCostV1,
 } = require('../dist/contracts/budget/v1.js');
@@ -96,6 +98,20 @@ test('consumer signals retain their source, reason, attempts and state', () => {
   assert.equal(isBudgetSignalV1({ ...signal, unreviewedDefault: true }), false);
 });
 
+test('signal resumption contracts require a stable request key and validate outcomes', () => {
+  const request = { version: 'v1', resumeId: 'resume-001', signalId: 'signal-001' };
+  assert.equal(isBudgetSignalResumeRequestV1(request), true);
+  assert.equal(isBudgetSignalResumeRequestV1({ ...request, resumeId: '' }), false);
+  assert.equal(isBudgetSignalResumeResultV1({
+    ...request, status: 'reservation_retried',
+    reservation: { version: 'v1', actionId: 'action-001', status: 'reserved', reservationId: 'reservation-001' },
+  }), true);
+  assert.equal(isBudgetSignalResumeResultV1({
+    ...request, status: 'manual_action_required', reason: 'unknown_cost',
+  }), true);
+  assert.equal(isBudgetSignalResumeResultV1({ ...request, status: 'auto_released' }), false);
+});
+
 test('snapshot alert, blocker, and illustrative economics guards reject malformed shapes', () => {
   const snapshot = fixtures.consumer.readSnapshot;
   assert.equal(isBudgetThresholdAlertV1(snapshot.alerts[0]), true);
@@ -110,6 +126,9 @@ test('snapshot alert, blocker, and illustrative economics guards reject malforme
     ...snapshot.illustrativeEconomics,
     contributionBeforeCacMinor: 2_701,
   }), false);
+
+  assert.equal(isBudgetReadSnapshotV1({ ...snapshot, signals: [{ ...fixtures.consumer.unknownCostSignal }] }), true);
+  assert.equal(isBudgetReadSnapshotV1({ ...snapshot, signals: [{}] }), false);
 });
 
 test('reservation requests reject missing costs, malformed money and invalid retry counts', () => {

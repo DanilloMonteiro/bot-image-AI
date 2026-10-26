@@ -6,6 +6,7 @@ import {
   isBudgetReservationDecisionRequestV1,
   isBudgetReservationRequestV1,
   type BudgetExposureV1,
+  type BudgetLedgerSnapshotV1,
   type BudgetOpeningBalanceReconciliationV1,
   type BudgetOpeningBalanceWriteResultV1,
   type BudgetReadSnapshotV1,
@@ -17,6 +18,7 @@ import {
   type BudgetReservationResultV1,
 } from '../../contracts/budget/v1';
 import { reservationTotalMinor } from './limits';
+import { projectBudgetSnapshot } from './snapshot';
 
 export type BudgetAdminVerifier = (actorId: string) => boolean | Promise<boolean>;
 
@@ -101,8 +103,9 @@ export class Budget {
     return this.repository.reconcileOpeningBalance(reconciliation);
   }
 
-  readBudgetSnapshot(): Promise<BudgetReadSnapshotV1> {
-    return this.repository.readBudgetSnapshot();
+  async readBudgetSnapshot(): Promise<BudgetReadSnapshotV1> {
+    const ledgerSnapshot: BudgetLedgerSnapshotV1 = await this.repository.readBudgetLedgerSnapshot();
+    return projectBudgetSnapshot(ledgerSnapshot);
   }
 }
 

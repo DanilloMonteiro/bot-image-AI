@@ -108,11 +108,75 @@ export type BudgetBalanceV1 = {
   available: BudgetAmountV1;
 };
 
-export type BudgetReadSnapshotV1 = {
+/** Thresholds are percentages of each scope's full approved cap. */
+export const BUDGET_ALERT_THRESHOLDS_V1 = [60, 80, 95] as const;
+export type BudgetAlertThresholdV1 = typeof BUDGET_ALERT_THRESHOLDS_V1[number];
+
+export type BudgetLedgerSnapshotV1 = {
   version: typeof BUDGET_CONTRACT_VERSION;
   generatedAt: string;
   total: BudgetBalanceV1;
   categories: BudgetCategoryBalanceV1[];
+};
+
+export type BudgetThresholdAlertV1 =
+  | {
+    scope: 'total';
+    thresholdPercent: BudgetAlertThresholdV1;
+    status: 'reached' | 'not_reached' | 'unknown';
+  }
+  | {
+    scope: 'category';
+    category: BudgetCappedCategoryV1;
+    thresholdPercent: BudgetAlertThresholdV1;
+    status: 'reached' | 'not_reached' | 'unknown';
+  };
+
+export type BudgetSnapshotBlockerV1 =
+  | { kind: 'balance_unknown'; scope: 'total'; reason: string }
+  | { kind: 'balance_unknown'; scope: 'category'; category: BudgetCappedCategoryV1; reason: string }
+  | {
+    kind: 'limit_reached'; scope: 'total'; reason: 'budget_cap_reached';
+    exposureMinor: number; capMinor: number;
+  }
+  | {
+    kind: 'limit_reached'; scope: 'category'; category: BudgetCappedCategoryV1;
+    reason: 'budget_cap_reached'; exposureMinor: number; capMinor: number;
+  };
+
+export const BUDGET_ILLUSTRATIVE_ECONOMICS_V1 = Object.freeze({
+  status: 'hypothesis',
+  label: 'five_image_package',
+  notAnOffer: true,
+  currency: 'BRL',
+  package: Object.freeze({ imageCount: 5, priceMinor: 3_990 }),
+  premises: Object.freeze([
+    Object.freeze({ kind: 'images_and_retries', amountMinor: 750 }),
+    Object.freeze({ kind: 'conversational_ai', amountMinor: 70 }),
+    Object.freeze({ kind: 'whatsapp', amountMinor: 100 }),
+    Object.freeze({ kind: 'pix_gateway', amountMinor: 150 }),
+    Object.freeze({ kind: 'allocated_previews', amountMinor: 180 }),
+    Object.freeze({ kind: 'storage_and_operations', amountMinor: 40 }),
+  ]),
+  variableCostTotalMinor: 1_290,
+  contributionBeforeCacMinor: 2_700,
+  cacScenarios: Object.freeze([
+    Object.freeze({ cacMinor: 800, contributionAfterCacMinor: 1_900 }),
+    Object.freeze({ cacMinor: 1_500, contributionAfterCacMinor: 1_200 }),
+    Object.freeze({ cacMinor: 2_200, contributionAfterCacMinor: 500 }),
+  ]),
+  source: Object.freeze({
+    document: 'prd_addendum',
+    section: 'Simulação econômica ilustrativa',
+  }),
+} as const);
+
+export type BudgetIllustrativeEconomicsV1 = typeof BUDGET_ILLUSTRATIVE_ECONOMICS_V1;
+
+export type BudgetReadSnapshotV1 = BudgetLedgerSnapshotV1 & {
+  alerts: BudgetThresholdAlertV1[];
+  blockers: BudgetSnapshotBlockerV1[];
+  illustrativeEconomics: BudgetIllustrativeEconomicsV1;
 };
 
 export type BudgetSignalV1 = {
@@ -408,16 +472,171 @@ export function isBudgetExposureV1(value: unknown): value is BudgetExposureV1 {
     && isUtcTimestamp(value.occurredAt);
 }
 
-export function isBudgetReadSnapshotV1(value: unknown): value is BudgetReadSnapshotV1 {
+export function isBudgetLedgerSnapshotV1(value: unknown): value is BudgetLedgerSnapshotV1 {
   return isObject(value)
     && hasOnlyKeys(value, ['version', 'generatedAt', 'total', 'categories'])
     && hasOwnKeys(value, ['version', 'generatedAt', 'total', 'categories'])
-    && value.version === BUDGET_CONTRACT_VERSION
-    && isUtcTimestamp(value.generatedAt)
-    && isBudgetBalance(value.total)
-    && Array.isArray(value.categories)
-    && value.categories.every(isCategoryBalance)
-    && new Set(value.categories.map((item) => (item as BudgetCategoryBalanceV1).category)).size === value.categories.length;
+    && isBudgetLedgerSnapshotShape(value);
+}
+
+export function isBudgetReadSnapshotV1(value: unknown): value is BudgetReadSnapshotV1 {
+  return isObject(value)
+    && hasOnlyKeys(value, [
+      'version', 'generatedAt', 'total', 'categories', 'alerts', 'blockers', 'illustrativeEconomics',
+    ])
+    && hasOwnKeys(value, [
+      'version', 'generatedAt', 'total', 'categories', 'alerts', 'blockers', 'illustrativeEconomics',
+    ])
+    && isBudgetLedgerSnapshotShape(value)
+    && isBudgetThresholdAlerts(value.alerts)
+    && isBudgetSnapshotBlockers(value.blockers)
+    && isBudgetIllustrativeEconomicsV1(value.illustrativeEconomics);
+}
+
+function isBudgetLedgerSnapshotShape(value: Record<string, unknown>): boolean {
+  if (value.version !== BUDGET_CONTRACT_VERSION
+    || !isUtcTimestamp(value.generatedAt)
+    || !isBudgetBalance(value.total)
+    || !Array.isArray(value.categories)
+    || value.categories.length !== BUDGET_CAPPED_CATEGORIES_V1.length
+    || !value.categories.every(isCategoryBalance)) return false;
+
+  const categories = value.categories.map((item) => (item as BudgetCategoryBalanceV1).category);
+  return new Set(categories).size === categories.length
+    && BUDGET_CAPPED_CATEGORIES_V1.every((category) => categories.includes(category));
+}
+
+export function isBudgetThresholdAlertV1(value: unknown): value is BudgetThresholdAlertV1 {
+  if (!isObject(value)
+    || !BUDGET_ALERT_THRESHOLDS_V1.includes(value.thresholdPercent as BudgetAlertThresholdV1)
+    || !['reached', 'not_reached', 'unknown'].includes(String(value.status))) return false;
+
+  if (value.scope === 'total') {
+    return hasOnlyKeys(value, ['scope', 'thresholdPercent', 'status'])
+      && hasOwnKeys(value, ['scope', 'thresholdPercent', 'status']);
+  }
+  return value.scope === 'category'
+    && hasOnlyKeys(value, ['scope', 'category', 'thresholdPercent', 'status'])
+    && hasOwnKeys(value, ['scope', 'category', 'thresholdPercent', 'status'])
+    && typeof value.category === 'string'
+    && CAPPED_CATEGORY_SET.has(value.category);
+}
+
+function isBudgetThresholdAlerts(value: unknown): value is BudgetThresholdAlertV1[] {
+  const expectedCount = (BUDGET_CAPPED_CATEGORIES_V1.length + 1) * BUDGET_ALERT_THRESHOLDS_V1.length;
+  if (!Array.isArray(value) || value.length !== expectedCount || !value.every(isBudgetThresholdAlertV1)) return false;
+  const keys = value.map((item) => {
+    const alert = item as BudgetThresholdAlertV1;
+    return `${alert.scope}:${alert.scope === 'category' ? alert.category : 'total'}:${alert.thresholdPercent}`;
+  });
+  return new Set(keys).size === expectedCount
+    && BUDGET_ALERT_THRESHOLDS_V1.every((threshold) => (
+      keys.includes(`total:total:${threshold}`)
+      && BUDGET_CAPPED_CATEGORIES_V1.every((category) => keys.includes(`category:${category}:${threshold}`))
+    ));
+}
+
+export function isBudgetSnapshotBlockerV1(value: unknown): value is BudgetSnapshotBlockerV1 {
+  if (!isObject(value) || !['total', 'category'].includes(String(value.scope))) return false;
+  const categoryValid = value.scope === 'category'
+    && typeof value.category === 'string'
+    && CAPPED_CATEGORY_SET.has(value.category);
+
+  if (value.kind === 'balance_unknown') {
+    if (value.scope === 'total') {
+      return hasOnlyKeys(value, ['kind', 'scope', 'reason'])
+        && hasOwnKeys(value, ['kind', 'scope', 'reason'])
+        && isNonEmptyString(value.reason);
+    }
+    return categoryValid
+      && hasOnlyKeys(value, ['kind', 'scope', 'category', 'reason'])
+      && hasOwnKeys(value, ['kind', 'scope', 'category', 'reason'])
+      && isNonEmptyString(value.reason);
+  }
+
+  const amountFieldsValid = typeof value.exposureMinor === 'number'
+    && Number.isSafeInteger(value.exposureMinor)
+    && value.exposureMinor >= 0
+    && typeof value.capMinor === 'number'
+    && Number.isSafeInteger(value.capMinor)
+    && value.capMinor > 0
+    && value.exposureMinor >= value.capMinor;
+  if (value.kind !== 'limit_reached' || value.reason !== 'budget_cap_reached' || !amountFieldsValid) return false;
+  if (value.scope === 'total') {
+    return hasOnlyKeys(value, ['kind', 'scope', 'reason', 'exposureMinor', 'capMinor'])
+      && hasOwnKeys(value, ['kind', 'scope', 'reason', 'exposureMinor', 'capMinor']);
+  }
+  return categoryValid
+    && hasOnlyKeys(value, ['kind', 'scope', 'category', 'reason', 'exposureMinor', 'capMinor'])
+    && hasOwnKeys(value, ['kind', 'scope', 'category', 'reason', 'exposureMinor', 'capMinor']);
+}
+
+function isBudgetSnapshotBlockers(value: unknown): value is BudgetSnapshotBlockerV1[] {
+  if (!Array.isArray(value) || !value.every(isBudgetSnapshotBlockerV1)) return false;
+  const scopes = value.map((item) => {
+    const blocker = item as BudgetSnapshotBlockerV1;
+    return blocker.scope === 'total' ? 'total' : `category:${blocker.category}`;
+  });
+  return new Set(scopes).size === scopes.length;
+}
+
+export function isBudgetIllustrativeEconomicsV1(value: unknown): value is BudgetIllustrativeEconomicsV1 {
+  if (!isObject(value)
+    || !hasOnlyKeys(value, [
+      'status', 'label', 'notAnOffer', 'currency', 'package', 'premises', 'variableCostTotalMinor',
+      'contributionBeforeCacMinor', 'cacScenarios', 'source',
+    ])
+    || !hasOwnKeys(value, [
+      'status', 'label', 'notAnOffer', 'currency', 'package', 'premises', 'variableCostTotalMinor',
+      'contributionBeforeCacMinor', 'cacScenarios', 'source',
+    ])
+    || value.status !== 'hypothesis'
+    || value.label !== 'five_image_package'
+    || value.notAnOffer !== true
+    || value.currency !== 'BRL'
+    || !isObject(value.package)
+    || !hasOnlyKeys(value.package, ['imageCount', 'priceMinor'])
+    || !hasOwnKeys(value.package, ['imageCount', 'priceMinor'])
+    || value.package.imageCount !== BUDGET_ILLUSTRATIVE_ECONOMICS_V1.package.imageCount
+    || value.package.priceMinor !== BUDGET_ILLUSTRATIVE_ECONOMICS_V1.package.priceMinor
+    || !isObject(value.source)
+    || !hasOnlyKeys(value.source, ['document', 'section'])
+    || !hasOwnKeys(value.source, ['document', 'section'])
+    || value.source.document !== BUDGET_ILLUSTRATIVE_ECONOMICS_V1.source.document
+    || value.source.section !== BUDGET_ILLUSTRATIVE_ECONOMICS_V1.source.section
+    || !matchesIllustrativeRows(value.premises, BUDGET_ILLUSTRATIVE_ECONOMICS_V1.premises, 'amountMinor', 'kind')
+    || !matchesIllustrativeRows(value.cacScenarios, BUDGET_ILLUSTRATIVE_ECONOMICS_V1.cacScenarios, 'cacMinor', 'contributionAfterCacMinor')) {
+    return false;
+  }
+
+  const variableCostTotal = BUDGET_ILLUSTRATIVE_ECONOMICS_V1.premises.reduce(
+    (total, premise) => total + premise.amountMinor,
+    0,
+  );
+  const contributionBeforeCac = BUDGET_ILLUSTRATIVE_ECONOMICS_V1.package.priceMinor - variableCostTotal;
+  return value.variableCostTotalMinor === variableCostTotal
+    && value.contributionBeforeCacMinor === contributionBeforeCac
+    && BUDGET_ILLUSTRATIVE_ECONOMICS_V1.cacScenarios.every((scenario) => (
+      scenario.contributionAfterCacMinor === contributionBeforeCac - scenario.cacMinor
+    ));
+}
+
+function matchesIllustrativeRows(
+  value: unknown,
+  expected: readonly Readonly<Record<string, number | string>>[],
+  firstKey: string,
+  secondKey: string,
+): boolean {
+  if (!Array.isArray(value) || value.length !== expected.length) return false;
+  return value.every((row, index) => {
+    const expectedRow = expected[index];
+    return isObject(row)
+      && expectedRow !== undefined
+      && hasOnlyKeys(row, Object.keys(expectedRow))
+      && hasOwnKeys(row, Object.keys(expectedRow))
+      && row[firstKey] === expectedRow[firstKey]
+      && row[secondKey] === expectedRow[secondKey];
+  });
 }
 
 function isBudgetBalance(value: unknown): value is BudgetBalanceV1 {

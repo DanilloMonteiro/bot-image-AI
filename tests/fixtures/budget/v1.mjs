@@ -59,6 +59,14 @@ const repeatedReservation = {
 
 const unknownAmount = { status: 'unknown', reason: 'awaiting_manual_reconciliation' };
 const knownZero = { status: 'known', amountMinor: 0, currency: 'BRL' };
+const budgetCaps = {
+  advertising: 22_000,
+  ai: 11_000,
+  railway: 6_500,
+  domain_accessories: 2_500,
+  meta_pix_fx_retries: 8_000,
+};
+const alertThresholds = [60, 80, 95];
 
 const readSnapshot = {
   version: 'v1',
@@ -71,17 +79,50 @@ const readSnapshot = {
     unbilled: unknownAmount,
     available: unknownAmount,
   },
-  categories: [
-    {
-      category: 'ai',
-      cap: { status: 'known', amountMinor: 11000, currency: 'BRL' },
-      incurred: knownZero,
-      committed: knownZero,
-      reserved: unknownAmount,
-      unbilled: unknownAmount,
-      available: unknownAmount,
-    },
+  categories: Object.entries(budgetCaps).map(([category, capMinor]) => ({
+    category,
+    cap: { status: 'known', amountMinor: capMinor, currency: 'BRL' },
+    incurred: knownZero,
+    committed: knownZero,
+    reserved: unknownAmount,
+    unbilled: unknownAmount,
+    available: unknownAmount,
+  })),
+  alerts: [
+    ...alertThresholds.map((thresholdPercent) => ({ scope: 'total', thresholdPercent, status: 'unknown' })),
+    ...Object.keys(budgetCaps).flatMap((category) => alertThresholds.map((thresholdPercent) => ({
+      scope: 'category', category, thresholdPercent, status: 'unknown',
+    }))),
   ],
+  blockers: [
+    { kind: 'balance_unknown', scope: 'total', reason: 'awaiting_manual_reconciliation' },
+    ...Object.keys(budgetCaps).map((category) => ({
+      kind: 'balance_unknown', scope: 'category', category, reason: 'awaiting_manual_reconciliation',
+    })),
+  ],
+  illustrativeEconomics: {
+    status: 'hypothesis',
+    label: 'five_image_package',
+    notAnOffer: true,
+    currency: 'BRL',
+    package: { imageCount: 5, priceMinor: 3_990 },
+    premises: [
+      { kind: 'images_and_retries', amountMinor: 750 },
+      { kind: 'conversational_ai', amountMinor: 70 },
+      { kind: 'whatsapp', amountMinor: 100 },
+      { kind: 'pix_gateway', amountMinor: 150 },
+      { kind: 'allocated_previews', amountMinor: 180 },
+      { kind: 'storage_and_operations', amountMinor: 40 },
+    ],
+    variableCostTotalMinor: 1_290,
+    contributionBeforeCacMinor: 2_700,
+    cacScenarios: [
+      { cacMinor: 800, contributionAfterCacMinor: 1_900 },
+      { cacMinor: 1_500, contributionAfterCacMinor: 1_200 },
+      { cacMinor: 2_200, contributionAfterCacMinor: 500 },
+    ],
+    source: { document: 'prd_addendum', section: 'Simulação econômica ilustrativa' },
+  },
 };
 
 const unknownCostSignal = {

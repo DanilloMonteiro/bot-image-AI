@@ -21,9 +21,9 @@ import {
   type BudgetDecisionBlockReasonV1,
   type BudgetExposureV1,
   type BudgetExposureStateV1,
+  type BudgetLedgerSnapshotV1,
   type BudgetOpeningBalanceReconciliationV1,
   type BudgetOpeningBalanceWriteResultV1,
-  type BudgetReadSnapshotV1,
   type BudgetReconciliationV1,
   type BudgetReconciliationWriteResultV1,
   type BudgetReservationDecisionRequestV1,
@@ -409,7 +409,7 @@ function toCategoryBalance(
   };
 }
 
-function toBudgetReadSnapshot(state: BudgetLedgerState): BudgetReadSnapshotV1 {
+function toBudgetLedgerSnapshot(state: BudgetLedgerState): BudgetLedgerSnapshotV1 {
   let total: BudgetBalanceV1;
   if (!state.allKnown) {
     total = {
@@ -975,13 +975,13 @@ export class PostgresBudgetRepository implements BudgetRepository {
     }
   }
 
-  async readBudgetSnapshot(): Promise<BudgetReadSnapshotV1> {
+  async readBudgetLedgerSnapshot(): Promise<BudgetLedgerSnapshotV1> {
     await ensureBudgetReady();
     const client = await getPool().connect();
     try {
       await client.query('BEGIN');
       await lockBudgetLedger(client);
-      const snapshot = toBudgetReadSnapshot(await loadBudgetLedgerState(client));
+      const snapshot = toBudgetLedgerSnapshot(await loadBudgetLedgerState(client));
       await client.query('COMMIT');
       return snapshot;
     } catch (error) {

@@ -5,10 +5,13 @@ import { BUDGET_CONTRACT_FIXTURES_V1 as fixtures } from './fixtures/budget/v1.mj
 
 const require = createRequire(import.meta.url);
 const {
+  isBudgetIllustrativeEconomicsV1,
   isBudgetReadSnapshotV1,
   isBudgetReservationRequestV1,
   isBudgetReservationResultV1,
+  isBudgetSnapshotBlockerV1,
   isBudgetSignalV1,
+  isBudgetThresholdAlertV1,
   toBudgetCostV1,
 } = require('../dist/contracts/budget/v1.js');
 const { isPlatformUsageRecordV1 } = require('../dist/contracts/platform-usage/v1.js');
@@ -70,6 +73,18 @@ test('consumer snapshot preserves unknown amounts and validates its versioned sh
     status: 'unknown', reason: 'awaiting_manual_reconciliation', amountMinor: 0,
   };
   assert.equal(isBudgetReadSnapshotV1(malformedAmount), false);
+
+  const malformedAlert = structuredClone(snapshot);
+  malformedAlert.alerts[0].extra = true;
+  assert.equal(isBudgetReadSnapshotV1(malformedAlert), false);
+
+  const missingCategory = structuredClone(snapshot);
+  missingCategory.categories.pop();
+  assert.equal(isBudgetReadSnapshotV1(missingCategory), false);
+
+  const alteredEconomics = structuredClone(snapshot);
+  alteredEconomics.illustrativeEconomics.package.imageCount = 10;
+  assert.equal(isBudgetReadSnapshotV1(alteredEconomics), false);
 });
 
 test('consumer signals retain their source, reason, attempts and state', () => {
@@ -79,6 +94,22 @@ test('consumer signals retain their source, reason, attempts and state', () => {
   assert.equal(isBudgetSignalV1({ ...signal, attempts: -1 }), false);
   assert.equal(isBudgetSignalV1({ ...signal, status: 'auto_released' }), false);
   assert.equal(isBudgetSignalV1({ ...signal, unreviewedDefault: true }), false);
+});
+
+test('snapshot alert, blocker, and illustrative economics guards reject malformed shapes', () => {
+  const snapshot = fixtures.consumer.readSnapshot;
+  assert.equal(isBudgetThresholdAlertV1(snapshot.alerts[0]), true);
+  assert.equal(isBudgetSnapshotBlockerV1(snapshot.blockers[0]), true);
+  assert.equal(isBudgetIllustrativeEconomicsV1(snapshot.illustrativeEconomics), true);
+
+  assert.equal(isBudgetThresholdAlertV1({ ...snapshot.alerts[0], thresholdPercent: 70 }), false);
+  assert.equal(isBudgetSnapshotBlockerV1({
+    kind: 'limit_reached', scope: 'total', reason: 'budget_cap_reached', exposureMinor: 5, capMinor: 10,
+  }), false);
+  assert.equal(isBudgetIllustrativeEconomicsV1({
+    ...snapshot.illustrativeEconomics,
+    contributionBeforeCacMinor: 2_701,
+  }), false);
 });
 
 test('reservation requests reject missing costs, malformed money and invalid retry counts', () => {

@@ -1,8 +1,8 @@
 import type {
   BudgetExposureV1,
+  BudgetLedgerSnapshotV1,
   BudgetOpeningBalanceReconciliationV1,
   BudgetOpeningBalanceWriteResultV1,
-  BudgetReadSnapshotV1,
   BudgetReconciliationV1,
   BudgetReconciliationWriteResultV1,
   BudgetReservationDecisionRequestV1,
@@ -32,5 +32,5 @@ export interface BudgetRepository {
   reconcileOpeningBalance(
     reconciliation: BudgetOpeningBalanceReconciliationV1,
   ): Promise<BudgetOpeningBalanceWriteResultV1>;
-  readBudgetSnapshot(): Promise<BudgetReadSnapshotV1>;
+  readBudgetLedgerSnapshot(): Promise<BudgetLedgerSnapshotV1>;
 }

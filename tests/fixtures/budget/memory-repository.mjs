@@ -349,7 +349,7 @@ export function createMemoryBudgetRepository({ categories, caps, totalCap, known
         };
       });
     },
-    async readBudgetSnapshot() {
+    async readBudgetLedgerSnapshot() {
       return exclusively(async () => {
         const known = allKnown();
         const categoryBalances = categories.map((category) => {

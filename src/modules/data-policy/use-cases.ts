@@ -3,6 +3,7 @@ import {
   isDataPolicyV1,
   type DataPolicyV1,
 } from '../../contracts/data-policy/v1.js';
+import { deepFreeze } from './deep-freeze.js';
 import { DATA_POLICY_V1 } from './policy-v1.js';
 
 export type DataPolicyBlockReasonV1 =
@@ -24,14 +25,6 @@ export type DataUseActionV1 = 'collect' | 'process';
 export type DataUseDecisionV1 =
   | { allowed: true; action: DataUseActionV1; version: DataPolicyV1['version'] }
   | { allowed: false; action: DataUseActionV1; reason: DataPolicyBlockReasonV1 };
-
-function deepFreeze<T>(value: T): T {
-  if (typeof value === 'object' && value !== null && !Object.isFrozen(value)) {
-    Object.freeze(value);
-    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
-  }
-  return value;
-}
 
 function immutableSnapshot(snapshot: DataPolicyV1): DataPolicyV1 {
   if (snapshot === DATA_POLICY_V1) return snapshot;

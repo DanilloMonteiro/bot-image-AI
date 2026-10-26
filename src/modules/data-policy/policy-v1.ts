@@ -1,12 +1,5 @@
 import type { DataPolicyV1 } from '../../contracts/data-policy/v1.js';
-
-function deepFreeze<T>(value: T): T {
-  if (typeof value === 'object' && value !== null && !Object.isFrozen(value)) {
-    Object.freeze(value);
-    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
-  }
-  return value;
-}
+import { deepFreeze } from './deep-freeze.js';
 
 /**
  * Owner-approved content for 2026-10-25. Operational checks deliberately remain pending,

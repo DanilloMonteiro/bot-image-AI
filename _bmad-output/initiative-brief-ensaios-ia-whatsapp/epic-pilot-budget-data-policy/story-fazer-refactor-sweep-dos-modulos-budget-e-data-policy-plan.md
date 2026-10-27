@@ -3,7 +3,7 @@ title: "Fazer refactor sweep dos módulos Budget e Data Policy"
 type: feature
 ticket: 8
 created: 2026-10-26
-status: built
+status: done
 baseline_revision: b08beb19ef8941e5103c2711e7efbe6db81f37b6
 route: full
 route_source: auto
@@ -100,3 +100,5 @@ Helper interno compartilhado; nenhuma mudança de ownership, persistência, form
 - 45 testes sintéticos de Data Policy e Budget passaram.
 - `npm run check:boundaries` e `git diff --check` — passaram.
 - `npx next build --webpack` — passou; Next usou o fallback WASM porque o binário nativo SWC não está instalado.
+
+Verificação atual de fechamento em 2026-10-27: a suíte sintética atual de sete arquivos, incluindo a política v2, passou com 51/51; `npx tsc -p tsconfig.worker.json`, `npm run check:boundaries`, `npx next build --webpack` e `git diff --check` passaram. A revisão inclui os ajustes da v2 e não usou dados reais ou provedores.

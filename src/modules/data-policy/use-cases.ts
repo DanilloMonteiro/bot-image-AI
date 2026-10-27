@@ -1,70 +1,62 @@
+import { isDataPolicyV1 } from '../../contracts/data-policy/v1.js';
 import {
-  DATA_POLICY_OPERATIONAL_CHECKS_V1,
-  isDataPolicyV1,
-  type DataPolicyV1,
-} from '../../contracts/data-policy/v1.js';
-import { deepFreeze } from './deep-freeze.js';
-import { DATA_POLICY_V1 } from './policy-v1.js';
+  isDataPolicyV2,
+  type DataPolicyV2,
+} from '../../contracts/data-policy/v2.js';
+import { DATA_POLICY_V2 } from './policy-v2.js';
 
-export type DataPolicyBlockReasonV1 =
+export type DataPolicyBlockReasonV2 =
   | 'policy_missing'
   | 'policy_incomplete'
   | 'policy_not_approved'
   | 'policy_not_current'
-  | 'operational_validation_pending';
+  | 'local_deletion_unverified';
 
-export type DataPolicyReadResultV1 =
-  | { status: 'available'; policy: DataPolicyV1; summary: string }
+export type DataPolicyReadResultV2 =
+  | { status: 'available'; policy: DataPolicyV2; summary: string }
   | {
     status: 'blocked';
-    reason: Exclude<DataPolicyBlockReasonV1, 'operational_validation_pending' | 'policy_not_current'>;
+    reason: Exclude<DataPolicyBlockReasonV2, 'local_deletion_unverified'>;
   };
 
-export type DataUseActionV1 = 'collect' | 'process';
+export type DataUseActionV2 = 'collect' | 'process';
 
-export type DataUseDecisionV1 =
-  | { allowed: true; action: DataUseActionV1; version: DataPolicyV1['version'] }
-  | { allowed: false; action: DataUseActionV1; reason: DataPolicyBlockReasonV1 };
-
-function immutableSnapshot(snapshot: DataPolicyV1): DataPolicyV1 {
-  if (snapshot === DATA_POLICY_V1) return snapshot;
-  return deepFreeze(structuredClone(snapshot));
-}
+export type DataUseDecisionV2 =
+  | { allowed: true; action: DataUseActionV2; version: DataPolicyV2['version'] }
+  | { allowed: false; action: DataUseActionV2; reason: DataPolicyBlockReasonV2 };
 
 /** Return the approved versioned content without implying operational readiness. */
-export function readApprovedDataPolicy(snapshot: unknown = DATA_POLICY_V1): DataPolicyReadResultV1 {
+export function readApprovedDataPolicy(snapshot: unknown = DATA_POLICY_V2): DataPolicyReadResultV2 {
   if (snapshot === null || snapshot === undefined) {
     return { status: 'blocked', reason: 'policy_missing' };
   }
-  if (!isDataPolicyV1(snapshot)) {
+  if (isDataPolicyV1(snapshot)) {
+    return { status: 'blocked', reason: 'policy_not_current' };
+  }
+  if (!isDataPolicyV2(snapshot)) {
     return { status: 'blocked', reason: 'policy_incomplete' };
   }
   if (snapshot.ownerApproval.status !== 'approved') {
     return { status: 'blocked', reason: 'policy_not_approved' };
   }
+  if (snapshot !== DATA_POLICY_V2) {
+    return { status: 'blocked', reason: 'policy_not_current' };
+  }
 
-  const policy = immutableSnapshot(snapshot);
-  return { status: 'available', policy, summary: policy.summary };
+  return { status: 'available', policy: DATA_POLICY_V2, summary: DATA_POLICY_V2.summary };
 }
 
 /** Keep owner approval separate from the operational gate for customer data. */
 export function decideDataUse(
   snapshot: unknown,
-  action: DataUseActionV1,
-): DataUseDecisionV1 {
+  action: DataUseActionV2,
+): DataUseDecisionV2 {
   const readResult = readApprovedDataPolicy(snapshot);
   if (readResult.status === 'blocked') {
     return { allowed: false, action, reason: readResult.reason };
   }
-  if (readResult.policy !== DATA_POLICY_V1) {
-    return { allowed: false, action, reason: 'policy_not_current' };
-  }
-
-  const operationsVerified = DATA_POLICY_OPERATIONAL_CHECKS_V1.every(
-    (check) => readResult.policy.operationalReadiness[check] === 'verified',
-  );
-  if (!operationsVerified) {
-    return { allowed: false, action, reason: 'operational_validation_pending' };
+  if (readResult.policy.operationalReadiness.localDeletion !== 'verified') {
+    return { allowed: false, action, reason: 'local_deletion_unverified' };
   }
 
   return { allowed: true, action, version: readResult.policy.version };

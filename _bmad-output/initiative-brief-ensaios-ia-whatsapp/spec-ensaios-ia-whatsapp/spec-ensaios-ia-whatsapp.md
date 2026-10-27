@@ -76,11 +76,12 @@ No piloto, pelo menos 90% das conversas de teste concluem a compra sem comandos,
 
 ## Decisions
 
-- Decisão do proprietário em 2026-10-25, registrada na story 2.2 do Epic 2: AbacatePay para Pix; Google Vertex AI Gemini 3.8 Flash em multi-região nos EUA para conversa e Nano Banana 2.1 no endpoint global para imagens; incluir a Plataforma WhatsApp Business oficial/Meta na política. Foram aprovados 7 dias para fotos após entrega e para conversa/prova mínima de consentimento após encerramento. Cópias/retenção do Google, incluindo processamento global de imagens, foram aceitas; os prazos dos endpoints efetivamente usados e eventuais intermediários devem ser informados. Backups PostgreSQL da Railway mantêm a configuração atual e podem conservar cópias até expirarem.
+- Decisão do proprietário em 2026-10-25, registrada na story 2.2 do Epic 2: AbacatePay para Pix; Google Vertex AI Gemini 3.8 Flash em multi-região nos EUA para conversa e Nano Banana 2.1 no endpoint global para imagens; incluir a Plataforma WhatsApp Business oficial/Meta na política. Foram aprovados 7 dias para fotos após entrega e para conversa/prova mínima de consentimento após encerramento. Seguir os padrões dos serviços selecionados; backups PostgreSQL da Railway mantêm a configuração atual e podem conservar cópias até expirarem.
+- Decisão de 2026-10-27: o proprietário definiu que a exclusão coberta pelo sistema se limita aos dados sob controle da aplicação — conversa e prova mínima no PostgreSQL e imagens no Bucket privado. Cópias Meta/Google e localização de processamento não são gates da política; a aplicação não promete solicitar ou comprovar exclusão externa. Após pesquisa de candidatos solicitada pelo proprietário, adotar a recomendação de WhatsApp Cloud API direta, sem BSP no piloto.
 
 ## Open Questions
 
-- Antes de dados reais: versionar e apresentar a política; confirmar transferência internacional e criptografia; validar acesso restrito e exclusão verificável, inclusive em objetos no Bucket, dados ativos, dumps de backup e fornecedores. Não prometer exclusão de cópias do Google ou registros de transação que fornecedores/parceiros mantenham por obrigação legal/regulatória.
+- Antes de dados reais: versionar e apresentar a política; seguir os controles padrão de proteção dos serviços escolhidos; validar acesso restrito e a exclusão local das cópias ativas sob controle da aplicação, incluindo conversas no PostgreSQL e objetos no Bucket. Dumps de banco expiram segundo a configuração existente. Região e cópias Meta/Google não bloqueiam o uso; a exclusão local implementada e comprovada continua como gate.
 - Quais preços, pacotes e limiar de margem serão aprovados antes de anunciar?
 - Qual prazo de entrega será comunicado após os testes de capacidade, e quais critérios visuais e limite de tentativas serão usados?
 - Qual política de revisão, quantidade de ajustes, cancelamento e reembolso vale para resultados insatisfatórios?

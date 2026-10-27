@@ -3,7 +3,7 @@ title: "Executar E2E de orçamento e política de dados"
 type: feature
 ticket: 9
 created: 2026-10-26
-status: built
+status: done
 baseline_revision: fc8b1072045bf608250c760d220fc3d954a63e7b
 route: full
 route_source: auto
@@ -50,7 +50,7 @@ context:
 | Retomada | Saldo corrigido, mesma reserva e `resumeId` repetido | Revalida limites, reserva uma vez com o `actionId` original e reproduz o resultado | Bloqueio continua acionável; nenhuma liberação automática |
 | Conciliação | Estado pendente/desconhecido, depois terminal conhecido | Reserva permanece ativa até evidência e decisão admin; snapshot reflete os estados | Tentativa não terminal fica bloqueada e auditável |
 | Política ausente/não aprovada | Ação `collect` ou `process` | Decisão bloqueia e contador de callback permanece zero | Nenhum serviço/dado é chamado |
-| Política aprovada sem validação operacional | Artefato canônico v1 com checks pendentes | Leitura informativa disponível; coleta/processamento bloqueados | Não substituir o artefato por cópia injetada |
+| Política aprovada sem validação operacional | Artefato canônico v2 com exclusão local pendente; v1 permanece apenas como histórico | Leitura informativa disponível; coleta/processamento bloqueados | Rejeitar v1 e snapshots injetados como não correntes |
 
 </frozen-after-approval>
 
@@ -59,7 +59,7 @@ context:
 - `src/adapters/http/budget-trace-handler.ts` — entrada sintética com chave idempotente.
 - `src/worker/budget-trace-handler.ts` — validação e leitura da reserva pelo worker.
 - `src/modules/budget/use-cases.ts`, `src/modules/budget/snapshot.ts` — fluxo do ledger, limites, sinais e projeção.
-- `src/modules/data-policy/use-cases.ts`, `src/modules/data-policy/policy-v1.ts` — decisões fail-closed e artefato aprovado.
+- `src/modules/data-policy/use-cases.ts`, `src/modules/data-policy/policy-v2.ts` — política aprovada atual e bloqueio fail-closed; v1 fica como histórico.
 - `tests/fixtures/budget/memory-repository.mjs` — persistência sintética concorrente, sem rede ou dados pessoais.
 - Novo `tests/budget-data-policy-e2e.test.mjs` — composição E2E sintética de tracer, Budget e Data Policy.
 - `tests/platform-smoke.test.mjs` — cobertura existente do smoke geral; fora da execução desta story.
@@ -80,12 +80,13 @@ context:
 
 ## Implementation Notes
 
-- A nova suíte compõe os handlers HTTP/worker com `createMemoryBudgetRepository` e testa custos/identificadores sintéticos; nenhum adapter PostgreSQL ou provedor é iniciado.
+- A nova suíte compõe os handlers HTTP/worker com `createMemoryBudgetRepository` e testa custos/identificadores sintéticos; nenhum adapter PostgreSQL ou provedor é iniciado. A política atual é v2; v1 e snapshots injetados são rejeitados como não correntes.
 - Os cinco cenários E2E cobrem tracer/concurrency/redelivery, limites e desconhecidos, retry, conciliação terminal com decisão admin e bloqueios Data Policy.
 
 ## Plan Change Log
 
 - 2026-10-26: added integrated synthetic tracer/Budget/Data Policy suite; no production-provider or database access.
+- 2026-10-27: updated the Data Policy E2E gate from the historical v1 artifact to the owner-approved v2 with local deletion pending; provider copies and region remain outside the readiness gate.
 
 ## Review Triage Log
 
@@ -109,3 +110,5 @@ A suíte é in-process, mas compõe os adaptadores HTTP/worker, módulo Budget, 
 - Suíte E2E + contratos sintéticos de Budget/Data Policy — 50 testes passaram.
 - `npm run check:boundaries` e `git diff --check` — passaram.
 - `npx next build --webpack` — passou; Next usou o fallback WASM porque o binário nativo SWC não está instalado.
+
+Verificação atual de fechamento em 2026-10-27: a suíte E2E e os seis arquivos complementares de Data Policy/Budget passaram com 51/51; `npx tsc -p tsconfig.worker.json`, `npm run check:boundaries`, `npx next build --webpack` e `git diff --check` passaram após o ajuste final da fixture de custo desconhecido. O fluxo permanece inteiramente sintético.

@@ -3,7 +3,7 @@ title: "Expandir a reserva para o ledger e os limites do piloto"
 type: feature
 ticket: 4
 created: 2026-10-25
-status: built
+status: done
 baseline_revision: b37d0b213bd13e04aa78e09bb8c4b6dd74913d77
 route: full
 route_source: auto

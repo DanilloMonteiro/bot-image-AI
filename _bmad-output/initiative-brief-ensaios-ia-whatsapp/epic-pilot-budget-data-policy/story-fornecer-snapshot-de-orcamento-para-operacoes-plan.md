@@ -3,7 +3,7 @@ title: "Fornecer snapshot de orçamento para Operações"
 type: feature
 ticket: 6
 created: 2026-10-25
-status: built
+status: done
 baseline_revision: 98450a087cfb5b786e06e9eb2be2304b1a672aa8
 route: full
 route_source: auto

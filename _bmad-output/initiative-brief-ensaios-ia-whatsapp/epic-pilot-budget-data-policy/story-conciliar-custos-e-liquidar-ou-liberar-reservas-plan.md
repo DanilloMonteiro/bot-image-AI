@@ -3,7 +3,7 @@ title: "Conciliar custos e liquidar ou liberar reservas"
 type: feature
 ticket: 5
 created: 2026-10-25
-status: built
+status: done
 baseline_revision: b37d0b213bd13e04aa78e09bb8c4b6dd74913d77
 route: full
 route_source: auto
@@ -71,11 +71,19 @@ context:
 - Given custo final positivo, when liquidação, then contabiliza o valor real conhecido, inclusive se diferir da reserva; custo não faturado permanece nessa categoria.
 - Given um saldo inicial incompleto, when reservar, then as categorias sem evidência continuam desconhecidas e falham fechado.
 
+### Current acceptance addendum (2026-10-27)
+
+- Given o custo WhatsApp Meta ainda não confirmado no Billing Hub, when uma operação paga é solicitada ou reservada, then Budget mantém o custo desconhecido e bloqueia o gasto; nenhuma estimativa anterior de R$0,035 é tratada como preço real.
+
 ## Implementation Notes
 
 Conciliações terminais exigem evidência compatível com a fonte e custo BRL conhecido para liquidar; liberar exige custo final comprovado em zero. Decisões autorizadas gravam auditoria e transição na mesma transação. Baselines só ficam conhecidos quando os quatro estados têm valores e evidência, e a conciliação que pode liberar novas reservas também exige o callback administrativo.
 
+Em 2026-10-27, após pesquisa de candidatos solicitada pelo proprietário, a rota recomendada e adotada para o piloto é Meta Cloud API direta, sem BSP. Esta decisão não muda a conciliação: tarifa brasileira, moeda e classificação aplicável seguem desconhecidas até confirmação no Billing Hub; um custo Meta não confirmado continua desconhecido e impede gasto pago.
+
 ## Plan Change Log
+
+- **2026-10-27 — rota escolhida após pesquisa solicitada pelo proprietário:** Meta Cloud API direta sem BSP. O custo Meta ainda não confirmado permanece desconhecido e bloqueia operação paga, sem alterar as regras existentes de conciliação terminal, autorização, idempotência ou auditoria.
 
 ## Review Triage Log
 
@@ -93,3 +101,5 @@ O adapter futuro de identidade fornecerá o callback de autorização para os do
 - `npx tsc -p tsconfig.worker.json` — passou.
 - `node --test tests/budget-reconciliation.test.mjs tests/budget-ledger.test.mjs tests/budget-contracts.test.mjs` — passou, 22/22.
 - `npm run check:boundaries` — passou.
+
+Verificação atual de fechamento em 2026-10-27: a suíte sintética atual de sete arquivos, incluindo o caso em que o custo WhatsApp Meta desconhecido bloqueia a reserva, passou com 51/51; `npx tsc -p tsconfig.worker.json`, `npm run check:boundaries`, `npx next build --webpack` e `git diff --check` passaram. Nenhuma cobrança ou integração real foi usada.

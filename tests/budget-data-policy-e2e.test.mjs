@@ -11,6 +11,7 @@ const {
 } = require('../dist/modules/budget/limits.js');
 const { Budget } = require('../dist/modules/budget/use-cases.js');
 const { DATA_POLICY_V1 } = require('../dist/modules/data-policy/policy-v1.js');
+const { DATA_POLICY_V2 } = require('../dist/modules/data-policy/policy-v2.js');
 const { decideDataUse, readApprovedDataPolicy } = require('../dist/modules/data-policy/use-cases.js');
 const { handleBudgetTraceRequest } = require('../dist/adapters/http/budget-trace-handler.js');
 const { handleBudgetTraceJob } = require('../dist/worker/budget-trace-handler.js');
@@ -155,7 +156,7 @@ test('category/total caps and unknown cost fail closed into actionable snapshot 
 
   const unknown = makeEnvironment({ known: true });
   assert.equal((await unknown.budget.reserveAction(reservation('e2e-cost-unknown-action', {
-    costStatus: 'unknown',
+    costStatus: 'unknown', category: 'meta_pix_fx_retries',
   }))).reason, 'unknown_cost');
   const signal = (await unknown.budget.readBudgetSnapshot()).signals[0];
   assert.equal(signal.kind, 'unknown_cost');
@@ -226,18 +227,19 @@ test('unknown reconciliation remains active until terminal evidence and an admin
   assert.equal(finalSnapshot.categories.find((item) => item.category === 'ai').reserved.amountMinor, 0);
 });
 
-test('Data Policy blocks absent, unapproved, or operationally pending collect/process callbacks', async () => {
+test('Data Policy blocks absent, stale, or locally unverified collect/process callbacks', async () => {
   let serviceCalls = 0;
-  const syntheticService = async () => { serviceCalls += 1; };
+  const providerCall = async () => { serviceCalls += 1; };
   const runBehindPolicy = async (snapshot, action) => {
     const decision = decideDataUse(snapshot, action);
-    if (decision.allowed) await syntheticService();
+    if (decision.allowed) await providerCall();
     return decision;
   };
 
-  assert.equal(readApprovedDataPolicy(DATA_POLICY_V1).status, 'available');
-  const unapproved = structuredClone(DATA_POLICY_V1);
-  unapproved.ownerApproval = { status: 'not_approved', decidedAt: '2026-10-26', approvedAt: null };
+  assert.equal(readApprovedDataPolicy().status, 'available');
+  assert.equal(DATA_POLICY_V2.operationalReadiness.localDeletion, 'pending');
+  const unapproved = structuredClone(DATA_POLICY_V2);
+  unapproved.ownerApproval = { status: 'not_approved', decidedAt: '2026-10-27', approvedAt: null };
   for (const action of ['collect', 'process']) {
     assert.deepEqual(await runBehindPolicy(null, action), {
       allowed: false, action, reason: 'policy_missing',
@@ -246,7 +248,10 @@ test('Data Policy blocks absent, unapproved, or operationally pending collect/pr
       allowed: false, action, reason: 'policy_not_approved',
     });
     assert.deepEqual(await runBehindPolicy(DATA_POLICY_V1, action), {
-      allowed: false, action, reason: 'operational_validation_pending',
+      allowed: false, action, reason: 'policy_not_current',
+    });
+    assert.deepEqual(await runBehindPolicy(DATA_POLICY_V2, action), {
+      allowed: false, action, reason: 'local_deletion_unverified',
     });
   }
   assert.equal(serviceCalls, 0);

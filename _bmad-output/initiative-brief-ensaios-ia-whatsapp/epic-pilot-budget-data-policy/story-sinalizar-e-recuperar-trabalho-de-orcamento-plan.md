@@ -3,7 +3,7 @@ title: "Sinalizar e recuperar trabalho de orçamento"
 type: feature
 ticket: 7
 created: 2026-10-26
-status: built
+status: done
 baseline_revision: 6a7fb181fb02a6d4017d0591c78fab886b50349b
 route: full
 route_source: auto

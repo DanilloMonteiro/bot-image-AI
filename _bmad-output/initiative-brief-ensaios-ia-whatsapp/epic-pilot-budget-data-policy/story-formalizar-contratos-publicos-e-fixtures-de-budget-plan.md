@@ -3,7 +3,7 @@ title: "Formalizar contratos públicos e fixtures de Budget"
 type: feature
 ticket: 3
 created: 2026-10-25
-status: built
+status: done
 baseline_revision: b37d0b213bd13e04aa78e09bb8c4b6dd74913d77
 route: full
 route_source: auto

@@ -1,0 +1,14 @@
+# Digest — Twilio integration and onboarding — round 1
+
+Accessed 2026-10-27. Sources are Twilio-owned developer documentation and pricing pages.
+
+- **Claim:** Twilio's WhatsApp quickstart uses its Programmable Messaging REST API and server-side SDKs; it can send and receive test messages through a WhatsApp testing environment/Sandbox before sender registration. **Source:** https://www.twilio.com/docs/whatsapp/quickstart — Twilio Docs, page date not shown (n.d.), accessed 2026-10-27. **Confidence:** high; **class:** integration compatibility.
+- **Claim:** The Twilio self-sign-up flow includes choosing a number, connecting a WhatsApp Business Account, signing into Meta, providing business information, creating a profile, registering the number, granting Twilio access, and completing Meta business verification. **Source:** https://www.twilio.com/docs/whatsapp/self-sign-up — Twilio Docs, page date not shown (n.d.), accessed 2026-10-27. **Confidence:** medium; **class:** implementation effort. (The page's table of contents lists these steps; detail should be checked before making setup-time claims.)
+- **Claim:** Twilio's price is an added USD 0.005 for each inbound or outbound WhatsApp message, plus Meta's category/country fees; the published page labels its prices current as of September 2026. **Source:** https://www.twilio.com/en-us/whatsapp/pricing — Twilio, pricing current as of 2026-09, accessed 2026-10-27. **Confidence:** high; **class:** pricing.
+- **Claim:** Twilio's pricing page lists a USD 0.001 fee for each message ending in `Failed`. **Source:** https://www.twilio.com/en-us/whatsapp/pricing — Twilio, pricing current as of 2026-09, accessed 2026-10-27. **Confidence:** high; **class:** pricing.
+- **Claim:** Twilio says each sender supports 80 outbound messages per second by default; high-volume customers should contact support, and messages can queue or fail when the queue stays full for four hours. **Source:** https://www.twilio.com/docs/whatsapp/best-practices-and-faqs — Twilio Docs, page date not shown (n.d.), accessed 2026-10-27. **Confidence:** medium; **class:** performance/scale.
+- **Inference:** Using Twilio's REST API/SDK means the app depends on Twilio's account, credentials, API, and message representation; switching providers later requires replacing that integration. This follows from the vendor API boundary and has not been independently measured. **Source:** https://www.twilio.com/docs/whatsapp/quickstart — Twilio Docs, n.d., accessed 2026-10-27. **Confidence:** medium; **class:** vendor dependency.
+
+**Leads:** Inspect the self-sign-up prerequisites and any rules about phone numbers already registered to WhatsApp; compare their setup burden with Meta's direct setup. Verify what support is included at the pilot's usage level.
+
+**Looked for but not established:** No public service-level agreement or Brazilian onboarding time was established in this round.

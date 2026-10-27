@@ -40,6 +40,6 @@ A cliente pode pagar um Pedido por Pix com total verificável, e eventos do prov
 ## Notes
 
 - Open question: valores e pacotes finais dependem de validação de margem antes de anúncio.
-- Open question: provedor Pix e configuração de conta serão escolhidos após validar custo e operação; Asaas permanece proposta da fonte, não decisão.
+- Decision (2026-10-25, owner-approved): AbacatePay is the selected Pix provider for the MVP. This epic owns its account setup and payment integration; the Budget gate continues to block paid actions while their costs are unknown.
 - Decision: geração paga só começa depois de confirmação autenticada vinculada ao Pedido e ao valor; eventos repetidos não duplicam efeitos.
 - Decision: manter compra de cliente desabilitada até o caminho de geração e entrega estar pronto.

@@ -1,0 +1,82 @@
+[[entry]]
+id = 1
+type = "story"
+title = "AbacatePay oferece caminhos de teste e produção protegidos"
+description = "Implementa o adaptador AbacatePay em Dev mode e com configuração de produção, mantendo cobranças reais fechadas até os gates aprovados."
+verify = "Dev mode simula a cobrança; uma tentativa de usar produção permanece bloqueada sem rota de entrega do Epic 6, oferta aprovada, saldo verificável e liberações operacionais."
+covers = ["CAP-3"]
+after = ["2.4"]
+hitl = true
+risk = "high"
+references = ["AbacatePay Dev mode — https://docs.abacatepay.com/pages/devmode"]
+notes = ["Check outside criteria: Danillo confirma no ambiente configurado que as credenciais de teste não permitem criar cobrança real."]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Catálogo de teste cria pedidos verificáveis"
+description = "Cria catálogo e pedido com uma oferta privada de sandbox, recebendo identificadores opacos e consentimento por casos públicos simulados, sem depender do código do Epic 3."
+verify = "Um pedido de teste guarda cliente, conversa, consentimento, pacote e total esperado; oferta de teste não aparece como preço final e ausência ou revogação de consentimento impede criar pedido elegível."
+covers = ["CAP-1", "CAP-3"]
+after = [1, "2.3", "2.4"]
+hitl = false
+risk = "medium"
+notes = ["Decision (2026-10-27): usar dados locais de exemplo; integrar os casos públicos reais somente na story conjunta após Epic 3 e Epic 4."]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Pedido produz Pix e instruções sem depender do WhatsApp"
+description = "Cria uma cobrança Pix para o pedido e disponibiliza as instruções em uma saída local simulada, sem chamar o canal WhatsApp."
+verify = "O Dev mode retorna instruções vinculadas ao pedido; falha simulada de envio e repetição reutilizam a mesma cobrança e não geram duplicatas."
+covers = ["CAP-3"]
+after = [1, 2]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 4
+type = "story"
+title = "Avisos Pix são autenticados e conciliados uma única vez"
+description = "Valida os avisos da AbacatePay e concilia evento, pedido, conta, valor e moeda antes de confirmar pagamento."
+verify = "Assinatura inválida ou dados divergentes não confirmam o pedido; repetição, reenvio com novo identificador e eventos fora de ordem não duplicam a confirmação."
+covers = ["CAP-3"]
+after = [3]
+hitl = false
+risk = "high"
+references = ["AbacatePay webhooks — https://docs.abacatepay.com/pages/webhooks"]
+notes = ["Check outside criteria: Isaac revisa a verificação de assinatura e o registro de conciliação antes de habilitar a configuração de produção."]
+
+[[entry]]
+id = 5
+type = "story"
+title = "Pagamento confirmado libera uma autorização durável"
+description = "Depois de confirmar o Pix e consultar o Budget, publica uma única autorização idempotente para que o Epic 6 inicie a entrega."
+verify = "Pagamento confirmado e saldo autorizado produzem uma autorização vinculada ao pedido e valor; evento repetido retorna a mesma autorização, enquanto custo ou estado financeiro incerto mantém o pedido bloqueado."
+covers = ["CAP-3"]
+after = [4, "2.4"]
+hitl = false
+risk = "high"
+notes = ["Check outside criteria: o consumidor do Epic 6 verifica que a autorização pode ser lida uma vez sem iniciar geração duplicada."]
+
+[[entry]]
+id = 6
+type = "story"
+title = "Refactor sweep de Pedidos e Pagamentos"
+description = "Resolve somente dívida técnica e findings adiados nas stories do Epic 4 sem ampliar o escopo comercial."
+verify = "Os checks de qualidade e integração das stories 4.1 a 4.5 passam após a limpeza e nenhum finding adiado fica sem resolução ou registro."
+covers = ["CAP-1", "CAP-3"]
+after = [1, 2, 3, 4, 5]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 7
+type = "story"
+title = "Verificar o Epic 4 com compra de sandbox"
+description = "Percorre oferta de teste, pedido, Pix e autorização usando comprador sintético e remetente local simulado."
+verify = "A compra simulada termina com valor e pedido conciliados e uma autorização durável, sem WhatsApp real, dinheiro real, foto de cliente ou geração de imagem."
+covers = ["CAP-3"]
+after = [6, "2.4"]
+hitl = true
+risk = "medium"

@@ -14,7 +14,7 @@ risk: high
 
 ## Description
 
-Entregar um MVP que permite a um adulto contratar pelo WhatsApp um retrato individual gerado por IA, com conversa natural, consentimento explícito, pagamento Pix, prévia revisável, entrega e atendimento dos sócios. A primeira demonstração percorre compra até entrega em sandbox, usando dados e imagem sintéticos, sem cobrança ou fotos reais. As ações com clientes, dinheiro e provedores reais continuam bloqueadas até que as decisões de fornecedor, privacidade, retenção e operação estejam aprovadas.
+Entregar um MVP que permite a um adulto contratar pelo WhatsApp um retrato individual gerado por IA, com conversa natural, consentimento explícito, pagamento Pix, prévia revisável, entrega e atendimento dos sócios. A primeira demonstração percorre compra até entrega em sandbox, usando dados e imagem sintéticos, sem cobrança ou fotos reais. A Meta Cloud API direta, Google Vertex AI, Nano Banana e AbacatePay foram escolhidos; chamadas pagas, fotos reais e cobrança real continuam bloqueadas pelos gates de custo, exclusão local, catálogo aprovado e operação.
 
 ## Outcome
 
@@ -40,7 +40,7 @@ Uma pessoa adulta consegue concluir, em sandbox, o fluxo iniciado por uma mensag
 - CAP-2 é dividido: Conversas revela a política e coleta consentimento; Retratos revalida consentimento e elegibilidade para a imagem, finalidade e destino exatos antes de chamar provedor; Operações coordena direitos sobre dados e só conclui pedidos com evidências dos módulos e fornecedores.
 - CAP-5 é dividido: Operações é dona da decisão e interface de aprovação; Retratos mantém estado da prévia e geração; Orçamento fornece reserva atômica.
 - CAP-7 é dividido: Base/Orçamento fornece contabilização, bloqueio e relatório autoritativos; Operações apresenta uma visão somente leitura e registra a avaliação; esta iniciativa registra a decisão final de continuar ou parar.
-- Railway para aplicação/worker e PostgreSQL, Railway Bucket privado em IAD e os tetos de custo do piloto foram escolhidos. Ainda faltam validar conta e configuração efetivas, termos/segurança e custos do provedor, provedores de WhatsApp/Pix/IA, política de retenção/exclusão, preços de venda, estornos e limiares finais de qualidade.
+- Railway para aplicação/worker e PostgreSQL, Railway Bucket privado em IAD e os tetos de custo do piloto foram escolhidos. Os provedores também foram escolhidos: WhatsApp Cloud API diretamente pela Meta, Gemini 3.8 Flash para conversa e áudio, Nano Banana 2.1 para imagens e AbacatePay para Pix. Ainda faltam validar contas, configuração efetiva, termos e custos concretos. A política v2 foi aprovada; a exclusão local das cópias ativas no PostgreSQL e no Bucket precisa ser comprovada antes de fotos reais. Cópias externas Meta/Google e região não são gates da política. Preços de venda, estornos e limiares finais de qualidade continuam pendentes.
 
 ## Ownership by epic
 
@@ -48,6 +48,7 @@ Uma pessoa adulta consegue concluir, em sandbox, o fluxo iniciado por uma mensag
 - `epic-pilot-budget-data-policy`: ledger, reservas e políticas de dados do piloto.
 - `epic-whatsapp-conversation-consent`: canal WhatsApp, conversa e consentimento.
 - `epic-orders-pix`: pedidos e integração Pix.
+- `epic-whatsapp-pix-integration`: integração sandbox dos módulos WhatsApp/Conversas e Pedidos/Pix depois que os Epics 3 e 4 terminarem.
 - `epic-partner-operations`: painel, permissões, auditoria e suporte humano.
 - `epic-portrait-fulfillment`: fornecedor de IA, armazenamento privado, ciclo de vida e entrega de fotos.
 - `epic-preview-approval`: aprovação e fluxo de prévia.
@@ -79,4 +80,7 @@ Tracer path: mensagem recebida → FAQ e consentimento → foto de teste → Pix
 - Decisão do usuário (2026-10-14): limites e dependências explícitos entre os sete épicos, com plataforma primeiro.
 - Há conflito de fonte: o plano antigo descreve temas amplos e entrada por Instagram; a especificação atual define adulto, retrato individual e início pela primeira mensagem recebida no WhatsApp. O PRD UJ-1 ainda descreve anúncio/clique antes da mensagem, mas a reconciliação de UX deixa aquisição, clique e transição pelo Instagram fora da experiência do sistema; apenas metadados de campanha efetivamente fornecidos pelo canal podem ser usados. Nenhum épico implementa anúncios ou clique.
 - A proposta Fastify/Drizzle do plano antigo foi substituída pela arquitetura final Next.js + worker Node.js. PostgreSQL, pg-boss, Railway para aplicação/worker e Railway Bucket privado em IAD foram escolhidos; os tetos de custo também foram aprovados. A conta Railway ainda não está conectada e faltam validar a configuração efetiva, backup/restauração, segurança, privacidade, termos e custo medido. Provedores de WhatsApp/Pix/IA e suas condições continuam sem decisão.
-- Perguntas abertas: conexão e configuração efetiva do Railway; termos e custo medido de hospedagem; provedores e disponibilidade de sandbox de WhatsApp/Pix/IA; retenção, exclusão, cópias de fornecedores e backups; regra de liberação de reserva; preço, reembolso, tentativas e qualidade; contas, MFA e permissões dos sócios; alertas, acessibilidade e métricas/limiares de decisão.
+- Decisão do usuário (2026-10-27): Isaac conclui o Epic 3 e Danillo conclui o Epic 4 em paralelo, sem dependência entre as stories; ambos usam dados e serviços simulados para validar seus próprios módulos. Um Epic de integração com uma story integra os módulos depois que os dois épicos forem concluídos.
+- Decisão do usuário (2026-10-27): mensagens de voz fazem parte do MVP. Antes de processar o primeiro áudio da conversa, o serviço explica o uso de IA e pede confirmação; o original é processado temporariamente e não fica no banco ou no Bucket; apenas a transcrição segue a retenção de sete dias da conversa. Recusa ou falha de interpretação leva à alternativa por texto.
+- Decisão do usuário (2026-10-27): exigir uma compra manual com Pix real no teste final, depois que o Epic 6 tiver o caminho de entrega pronto e uma oferta com preço aprovado. A integração pós-Epics 3/4 usa apenas sandbox.
+- Perguntas abertas: conexão e configuração efetiva do Railway; custo medido de hospedagem e classificação/reserva dos custos externos; preço final, reembolso, tentativas e qualidade; contas, MFA e permissões dos sócios; alertas, acessibilidade e métricas/limiares de decisão.

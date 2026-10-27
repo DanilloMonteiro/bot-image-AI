@@ -4,7 +4,7 @@ title: Conversa no WhatsApp e consentimento
 parent: initiative-brief-ensaios-ia-whatsapp
 covers: [CAP-1, CAP-2]
 after: [epic-pilot-budget-data-policy]
-assignee: ""
+assignee: "Isaac"
 risk: high
 ---
 
@@ -20,11 +20,11 @@ A cliente entende a oferta e os requisitos antes do Pix e pode iniciar o fluxo s
 
 ## Done when
 
-1. Mensagens recebidas iniciam ou retomam conversa identificável e chegam à cliente por respostas em português com uma pergunta por vez e conteúdo comercial aprovado.
+1. Mensagens recebidas iniciam ou retomam conversa identificável e chegam à cliente por respostas em português com uma pergunta por vez e conteúdo comercial aprovado; mensagens repetidas e fora de ordem não duplicam efeitos nem regridem evidência de entrega.
 2. Elegibilidade para adulto usando a própria foto é confirmada antes de avançar; casos não elegíveis não seguem para geração.
-3. Política aprovada é apresentada antes da solicitação da foto, e o consentimento afirmativo e sua versão ficam registrados; sem consentimento o fluxo não coleta/processa mídia.
-4. Áudio, opt-in, templates, janela, custos e apresentação de automação seguem apenas regras habilitadas e validadas para a conta real do canal.
-5. Eventos repetidos de mensagem não duplicam resposta ou avanço de etapa, e uma solicitação de pessoa humana é entregue ao contrato de handoff da Operação em produção.
+3. Política aprovada é apresentada antes da solicitação da foto, e o consentimento afirmativo e sua versão ficam registrados; revogação bloqueia trabalho ainda não enviado, e fotos reais permanecem bloqueadas até haver prova da exclusão local no PostgreSQL e no Bucket.
+4. Antes de processar o primeiro áudio da conversa, o serviço explica o uso de IA e pede confirmação; o áudio original é transitório e não fica no banco nem no Bucket, enquanto a transcrição segue a retenção de sete dias da conversa. Recusa ou falha de interpretação oferece texto.
+5. Opt-in/opt-out do canal, revogação de consentimento e solicitações de direitos sobre dados são tratados separadamente; regras de templates e janela seguem a conta habilitada, e pedidos humanos ou de privacidade chegam ao contrato durável da Operação em produção.
 
 ## Boundaries
 
@@ -39,7 +39,8 @@ A cliente entende a oferta e os requisitos antes do Pix e pode iniciar o fluxo s
 
 ## Notes
 
+- Decision (2026-10-27): Isaac owns this epic and develops it independently from Epic 4; the shared sandbox integration is in Epic 8 after both epics.
+- Decision (2026-10-27): voice messages are included. The first audio in a conversation receives an AI-processing notice and requires confirmation; raw audio is transient, only the transcript is retained with conversation text for seven days, and refusal or failure falls back to text. This resolves PRD §10, question 14.
 - Decision: o sistema começa depois que a primeira mensagem é recebida no WhatsApp; anúncio do Instagram e transição ao canal não fazem parte do sistema.
-- Decision: FAQ base aprovada; preços listados são hipóteses, e prazo de entrega e retenção exata continuam pendentes antes de anúncio/coleta.
-- Open question: confirmar conta/provedor, opt-in, janela e templates, transparência sobre automação e custos antes de ativar o canal.
-- Open question: áudio, canal de notificação e demais detalhes de retomada da automação permanecem fora da decisão até confirmação.
+- Decision: FAQ base aprovada; preços listados são hipóteses, e prazo de entrega continua pendente antes de anúncio/coleta.
+- Open question: configurar e validar conta Meta, opt-in, janela, templates, transparência sobre automação e custos antes de ativar o canal.

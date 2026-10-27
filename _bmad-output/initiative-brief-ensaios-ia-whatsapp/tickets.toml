@@ -22,9 +22,17 @@ id = 4
 slug = "epic-orders-pix"
 title = "Pedidos e pagamento Pix"
 covers = ["CAP-1", "CAP-3"]
+after = [{ epic = 2, needs = "saldo e reserva de custo verificáveis antes de autorizar operações pagas" }]
+
+[[epic]]
+id = 8
+slug = "epic-whatsapp-pix-integration"
+title = "Integração da conversa com pedidos e Pix"
+covers = ["CAP-1", "CAP-3"]
 after = [
-  { epic = 2, needs = "saldo e reserva de custo verificáveis antes de autorizar operações pagas" },
-  { epic = 3, needs = "conversa, cliente e consentimento vinculáveis ao pedido" }
+  { epic = 2, needs = "contrato Budget para autorizar e conciliar chamadas pagas" },
+  { epic = 3, needs = "conversa real, identidade estável e consentimento disponíveis" },
+  { epic = 4, needs = "pedido, Pix sandbox e autorização durável disponíveis" }
 ]
 
 [[epic]]
@@ -47,6 +55,7 @@ after = [
   { epic = 2, needs = "política de dados e reserva de custo aprovadas" },
   { epic = 3, needs = "consentimento e elegibilidade registrados" },
   { epic = 4, needs = "pedido pago autenticado antes da geração faturável" },
+  { epic = 8, needs = "conversa do WhatsApp integrada ao pedido e ao Pix" },
   { epic = 5, needs = "rota operacional para aprovações, falhas e pedidos de dados" }
 ]
 

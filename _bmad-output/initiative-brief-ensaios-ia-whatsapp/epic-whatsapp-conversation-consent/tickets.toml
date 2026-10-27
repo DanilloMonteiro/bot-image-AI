@@ -1,0 +1,81 @@
+[[entry]]
+id = 1
+type = "story"
+title = "Conversa de texto inicia e retoma pelo WhatsApp"
+description = "Recebe e retoma mensagens de texto pelo WhatsApp, usa Gemini para responder com conteúdo aprovado e atribui identificadores internos estáveis à cliente e à conversa."
+verify = "Uma mensagem sintética do número de teste recebe uma única resposta correlacionada; reenvios e recibos fora de ordem não duplicam respostas nem regridem evidência de entrega."
+covers = ["CAP-1"]
+after = ["2.2", "2.4"]
+hitl = true
+risk = "medium"
+
+[[entry]]
+id = 2
+type = "story"
+title = "Elegibilidade e consentimento bloqueiam processamento indevido"
+description = "Confirma idade adulta e titularidade da foto, apresenta a política aprovada e guarda consentimento versionado antes de qualquer pedido de foto."
+verify = "Sem elegibilidade e consentimento afirmativo o fluxo não pede nem processa foto; revogação bloqueia trabalho ainda não enviado, e fotos reais só são aceitas após evidência da exclusão local no PostgreSQL e no Bucket."
+covers = ["CAP-2"]
+after = [1, "2.2"]
+hitl = true
+risk = "high"
+notes = ["Check outside criteria: Isaac confirma a evidência manual de exclusão local antes de liberar qualquer caminho de foto real."]
+
+[[entry]]
+id = 3
+type = "story"
+title = "FAQ e contexto mantêm a conversa coerente"
+description = "Usa a FAQ aprovada e o histórico útil da conversa para responder em português, fazer uma pergunta por vez e explicar com honestidade a automação."
+verify = "Casos sintéticos de dúvida, mudança de assunto e retomada recebem respostas baseadas apenas na FAQ e não inventam preço, prazo nem identidade humana."
+covers = ["CAP-1"]
+after = [2, "2.4"]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 4
+type = "story"
+title = "Mensagens de voz são entendidas com consentimento"
+description = "Recebe áudio após explicar o uso de IA e obter confirmação antes do primeiro processamento na conversa, guarda apenas a transcrição como mensagem e oferece texto quando houver recusa ou falha."
+verify = "Um áudio sintético OGG confirmado gera texto na conversa; o arquivo original não permanece no PostgreSQL ou no Bucket, a transcrição segue os sete dias da conversa e recusa ou falha não avança o fluxo."
+covers = ["CAP-1", "CAP-2"]
+after = [3, "2.2", "2.4"]
+hitl = false
+risk = "medium"
+references = ["Google Cloud audio understanding — https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/capabilities/audio-understanding"]
+notes = ["Decision (2026-10-27): áudio original é transitório; somente a transcrição fica como texto da conversa por até sete dias."]
+
+[[entry]]
+id = 5
+type = "story"
+title = "Regras do canal e pedidos de ajuda chegam à operação"
+description = "Aplica opt-in/opt-out, janela e templates habilitados na conta, separa revogação de consentimento e pedidos de direitos sobre dados e publica handoff humano durável para Epic 5."
+verify = "Mensagens fora das regras configuradas não são enviadas; opt-out bloqueia contato, revogação bloqueia processamento pendente e pedidos humanos ou de privacidade aparecem uma única vez no contrato de handoff, sem painel nesta story."
+covers = ["CAP-1", "CAP-2"]
+after = [4, "2.3", "2.4", "2.5"]
+hitl = true
+risk = "high"
+notes = ["Check outside criteria: um sócio confirma que a configuração e os custos do canal de teste estão dentro das regras e limites aprovados."]
+
+[[entry]]
+id = 6
+type = "story"
+title = "Refactor sweep das Conversas"
+description = "Resolve somente dívida técnica e findings adiados nas stories do Epic 3 sem ampliar o escopo do atendimento."
+verify = "Os checks de qualidade e integração das stories 3.1 a 3.5 passam após a limpeza e nenhum finding adiado fica sem resolução ou registro."
+covers = ["CAP-1", "CAP-2"]
+after = [1, 2, 3, 4, 5]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 7
+type = "story"
+title = "Verificar o Epic 3 com conversa sintética"
+description = "Percorre o início, consentimento e continuidade da conversa com texto e áudio sintéticos, usando pedidos e pagamentos simulados para manter o Epic 3 independente do Epic 4."
+verify = "A suíte percorre texto, áudio confirmado, recusa, falha de interpretação, revogação e handoff sem foto real, cobrança ou escrita nas tabelas de Pedidos/Pagamentos; chamadas externas só ocorrem quando o Budget as autoriza."
+covers = ["CAP-1", "CAP-2"]
+after = [6, "2.4", "2.5"]
+hitl = true
+risk = "high"
+notes = ["Check outside criteria: Isaac revisa as evidências sintéticas e a conciliação de custo antes de qualquer chamada real de Meta ou Gemini."]

@@ -2,7 +2,7 @@
 title: Ensaios IA por WhatsApp
 status: draft
 created: 2026-10-08
-updated: 2026-10-20
+updated: 2026-10-27
 ---
 
 # PRD: Ensaios IA por WhatsApp
@@ -68,7 +68,7 @@ O MVP atende somente adultos que enviem a própria foto. Fotos de terceiros e de
 
 O Cliente descreve tema, ocasião e preferências livremente. A conversa mantém contexto do Pedido, informa opções e resolve dúvidas sem impor árvore de menus.
 
-**FR-1 — Entender mensagens livres.** O Cliente pode descrever o ensaio em português brasileiro sem usar comandos ou códigos numéricos; o serviço também tenta entender ambiguidades e hesitações e pede esclarecimento quando necessário. O tratamento de áudio ainda precisa de decisão.  
+**FR-1 — Entender mensagens livres.** O Cliente pode descrever o ensaio em português brasileiro por texto e, após confirmação explícita antes do primeiro processamento de voz na conversa, por mensagem de áudio. O áudio original é usado apenas durante o processamento e não fica guardado no banco nem no Bucket; a transcrição fica como texto da Conversa por até sete dias após seu encerramento. Se o Cliente recusar ou o áudio não puder ser entendido, o serviço pede que continue por texto.
 **Consequências:** mensagens naturais podem iniciar, corrigir ou complementar a intenção; quando falta informação, o serviço faz uma pergunta por vez e aceita resposta livre, sem exigir menu, comando ou código.
 
 **FR-2 — Manter contexto da compra.** O sistema conserva os dados relevantes da Conversa e do Pedido entre mensagens e solicita apenas o dado necessário que ainda estiver faltando.  
@@ -333,13 +333,14 @@ Itens para resolver ou atribuir antes de usar este PRD como contrato completo de
 11. **[Resolvido em 2026-10-20; operacionalizar antes de gastos externos] Limites do piloto — fundadores/operadores.** Teto total e alocação aprovados conforme §6.1/FR-44. Antes de cada integração externa, configurar limite no provedor quando disponível ou reconciliar manualmente compromissos e cobranças não faturadas; alerta sozinho não garante interrupção imediata.
 12. **[Antes do piloto] Pesquisa e métricas — fundadores.** Definir medidas e limiares para procura/conversão, qualidade percebida dos ensaios e capacidade/esforço operacional dos dois sócios, além das medidas de usabilidade, prazo de entrega, suporte, CAC e margem; registrar critérios para decidir se o piloto continua ou é interrompido.
 13. **[Detalhar no handoff de UX] Operação das notificações — fundadores/UX.** UJ-2 registra que Carlos abre notificações acumuladas quando disponível e que os sócios responderão em até 24 horas. Detalhar prioridade de triagem, critérios de resolução e quando a automação retoma a conversa; não há horário fixo nem prazo de resolução aprovado.
-14. **[Antes de incluir áudio] Áudio — fundadores/UX.** Decidir se notas de voz fazem parte do MVP; se habilitadas, definir transcrição, falhas e consentimento.
+14. **[Resolvido em 2026-10-27; implementar no Epic 3] Áudio — fundadores/UX.** Notas de voz fazem parte do MVP. Antes do primeiro processamento na conversa, explicar o uso de IA e pedir confirmação explícita; processar o original transitoriamente, sem armazená-lo no banco ou no Bucket; guardar apenas a transcrição como texto da Conversa por até sete dias após o encerramento. Recusa ou falha de interpretação oferece texto.
 15. **[Antes de automatizar contatos] Pós-venda — fundadores/operadores.** Definir momento, número de contatos e templates permitidos para confirmar recebimento e oferecer suporte após a entrega.
 16. **[Antes de publicar mensagens] Transparência sobre automação — fundadores/jurídico.** Validar se regras atuais da plataforma e obrigações aplicáveis permitem não se identificar espontaneamente como virtual; manter resposta verdadeira se perguntarem.
 
 ## Decision Change Log
 
 - **2026-10-27 — owner-approved scope / route selected after requested candidate research:** avaliar Meta direta e BSPs conforme solicitação do proprietário e adotar a recomendação de WhatsApp Cloud API direta pela Meta, sem BSP no piloto; manter desconhecido o custo Meta até confirmação no Billing Hub e bloquear operações pagas enquanto isso. A política v2 cobre PostgreSQL e Bucket privados sob controle da aplicação; somente exclusão local verificada é gate de Data Policy. Exclusão de cópias Meta/Google e região ficam fora desse gate. A decisão não habilita dados, flags, chamadas, cobrança ou tráfego reais.
+- **2026-10-27 — audio approved:** include voice messages with explicit confirmation before the first audio is processed in a conversation; do not retain the original audio in the application database or Bucket; retain only its transcript as conversation text for up to seven days; on refusal or recognition failure, continue by text.
 
 ## 11. Índice de hipóteses
 

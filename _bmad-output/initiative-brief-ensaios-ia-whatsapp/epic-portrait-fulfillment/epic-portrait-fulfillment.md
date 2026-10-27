@@ -3,7 +3,7 @@ type: epic
 title: Processamento e entrega dos retratos
 parent: initiative-brief-ensaios-ia-whatsapp
 covers: [CAP-2, CAP-4]
-after: [epic-pilot-budget-data-policy, epic-whatsapp-conversation-consent, epic-orders-pix, epic-partner-operations]
+after: [epic-pilot-budget-data-policy, epic-whatsapp-conversation-consent, epic-orders-pix, epic-whatsapp-pix-integration, epic-partner-operations]
 assignee: ""
 risk: high
 ---

@@ -7,7 +7,7 @@ paradigm: modular monolith
 scope: MVP de retratos de aniversário por WhatsApp, do primeiro contato à operação dos sócios e entrega.
 status: final
 created: 2026-10-09
-updated: 2026-10-27
+updated: 2026-10-29
 binds: [CAP-1, CAP-2, CAP-3, CAP-4, CAP-5, CAP-6, CAP-7]
 sources:
   - ../spec-ensaios-ia-whatsapp/spec-ensaios-ia-whatsapp.md
@@ -48,7 +48,7 @@ Monólito modular TypeScript em um único código-base. A cliente percorre a jor
 
 - **Binds:** CAP-1, CAP-3–CAP-5
 - **Prevents:** texto gerado, comprovante da cliente ou estado local liberarem oferta, cobrança ou geração não aprovada.
-- **Rule:** IA pode interpretar intenção e preparar respostas/ações tipadas; casos de uso validam catálogo aprovado, autorização, custo e transição permitida. Conversas usa somente FAQ aprovada, faz uma pergunta por vez e não inventa preço ou prazo. Descontos e reembolsos seguem regras determinísticas aprovadas ou decisão explícita de sócio autorizado com confirmação no painel; IA não os cria nem autoriza, e toda decisão fica auditada. Só confirmação autenticada do provedor, correspondente ao pedido, conta recebedora, valor e moeda, autoriza geração paga. Cada item pago tem um único ID de autorização de entrega; eventos/transações repetidos convergem para ele. Novo pagamento após item já atendido vira conciliação/escalação, nunca geração extra automática. Preços só são comunicados após validação de margem; prazo só após teste de capacidade. Prévia e geração adicional exigem aprovação autorizada, reserva de custo e aplicação atômica dos limites por cliente e por dia; prévias têm baixa resolução e marca-d’água.
+- **Rule:** IA pode interpretar intenção e preparar respostas/ações tipadas; casos de uso validam catálogo aprovado, autorização, custo e transição permitida. Conversas usa somente FAQ aprovada, faz uma pergunta por vez e não inventa preço ou prazo. Descontos e reembolsos seguem regras determinísticas aprovadas ou decisão explícita de sócio autorizado com confirmação no painel; IA não os cria nem autoriza, e toda decisão fica auditada. Só confirmação autenticada do provedor, correspondente ao pedido, conta recebedora, valor e moeda, autoriza geração paga; evento sem horário confiável, tardio ou divergente fica em exceção recuperável. Um operador autenticado pode resolver a exceção com referência estável de evidência e dados terminais correspondentes; a decisão é idempotente e não cria autorização duplicada. Cada item pago tem um único ID de autorização de entrega; eventos/transações repetidos convergem para ele. Novo pagamento após item já atendido vira conciliação/escalação, nunca geração extra automática. Preços só são comunicados após validação de margem; prazo só após teste de capacidade. Prévia e geração adicional exigem aprovação autorizada, reserva de custo e aplicação atômica dos limites por cliente e por dia; prévias têm baixa resolução e marca-d’água.
 
 ### AD-5 — Elegibilidade, consentimento e ciclo de vida da mídia [ADOPTED]
 
@@ -80,6 +80,12 @@ Monólito modular TypeScript em um único código-base. A cliente percorre a jor
 - **Prevents:** jornada da cliente derivar para um produto separado ou mensagens ativas ignorarem consentimento e regras do canal.
 - **Rule:** o sistema começa na primeira mensagem recebida; perguntas, oferta, consentimento, foto, prévia, entrega e feedback permanecem na conversa nativa do WhatsApp. Após a pesquisa de candidatos solicitada pelo proprietário em 2026-10-27, a rota recomendada e adotada para o piloto é WhatsApp Cloud API diretamente pela Meta, sem BSP. Anúncio e clique do Instagram ficam fora do sistema; registrar somente metadados de campanha que o canal fornecer. Não criar app, login, formulário obrigatório ou portal para a cliente. Registrar opt-in/opt-out e verificar janela, template e elegibilidade antes de cada contato ativo. O custo Meta no Brasil e sua classificação para este negócio permanecem desconhecidos até confirmação no Billing Hub; o Budget bloqueia operação paga enquanto isso. Região e cópias Meta/Google não são gates da Data Policy v2, e esta decisão não habilita tráfego real.
 
+### AD-10 — Prontidão de Retratos por porta pública versionada [ADOPTED]
+
+- **Binds:** CAP-3, CAP-4
+- **Prevents:** Pedidos/Pagamentos inspecionar ou alterar tabelas de Retratos, ou autorizar Pix sem capacidade de entrega reservada para o pedido.
+- **Rule:** Retratos é dono da prontidão de fulfillment e expõe uma porta pública versionada para reservar por `orderId`/`packageId`, consumir uma vez por `authorizationId` e liberar somente depois de terminalidade do provedor e reconciliação concluída. Pedidos/Pagamentos não acessa tabelas de Retratos. Reservas usam chave estável por pedido/pacote; consumo e liberação são idempotentes para recuperação após falha entre módulos. Ausência, conflito, erro ou estado desconhecido bloqueia Pix/decisão e não libera a reserva por vencimento sozinho. Até Epic 6 fornecer uma implementação operacional, o adaptador permanece ausente e Pix real segue fechado; a oferta sandbox não usa a porta.
+
 ## Consistency Conventions
 
 | Concern | Convention |
@@ -87,6 +93,7 @@ Monólito modular TypeScript em um único código-base. A cliente percorre a jor
 | Naming and ownership | IDs CAP e estados seguem PRD/spec; cada módulo expõe casos de uso próprios e controla suas escritas. |
 | Money and time | Valores em BRL usam centavos inteiros; horários persistidos em UTC e convertidos para exibição. |
 | External events | IDs externos e chaves de idempotência únicas ficam associados aos IDs internos; eventos Pix validam provedor, pedido, conta, valor e moeda; web, worker e provedor são correlacionáveis. |
+| Portrait readiness | Pedidos/Pagamentos usa somente a porta `portrait-readiness/v1`; reserva por pedido/pacote, consumo por autorização e liberação após conciliação são idempotentes e falham fechados. |
 | State and security | Usar transições explícitas; segredos fora do código; logs redigidos sem fotos, conversa integral, tokens ou credenciais. |
 | Conversation | Seguir FAQ aprovada, uma pergunta por vez; registrar opt-in/opt-out e elegibilidade da mensagem antes de contato ativo. Feedback e follow-up respeitam regras do canal. |
 | Panel accessibility | Aplicar DESIGN.md: contraste mínimo, foco visível, estados com texto/ícone, motivo de ações indisponíveis e informação essencial fora de tooltips. |
@@ -151,8 +158,8 @@ src/
 | --- | --- | --- |
 | CAP-1 — intenção, FAQ e oferta | conversations, orders-payments | AD-2, AD-4, AD-9 |
 | CAP-2 — elegibilidade, consentimento e direitos | conversations, portraits, partner-operations | AD-2, AD-5, AD-7 |
-| CAP-3 — pedido e Pix | orders-payments | AD-3, AD-4 |
-| CAP-4 — geração, qualidade e entrega | portraits, worker | AD-1, AD-3, AD-5 |
+| CAP-3 — pedido e Pix | orders-payments | AD-3, AD-4, AD-10 |
+| CAP-4 — geração, qualidade e entrega | portraits, worker | AD-1, AD-3, AD-5, AD-10 |
 | CAP-5 — prévia e aprovação | portraits, partner-operations, budget | AD-4, AD-6, AD-7 |
 | CAP-6 — atendimento humano, privacidade e pós-venda | partner-operations, conversations | AD-2, AD-5, AD-7, AD-9 |
 | CAP-7 — custos e decisão do piloto | budget, partner-operations | AD-3, AD-6, AD-8 |
@@ -180,5 +187,7 @@ src/
 - **Atribuição de campanha:** definir campos e retenção quando o provedor do canal efetivamente fornecer metadados; não pressupor acesso a dados do anúncio/clique do Instagram.
 
 ## Decision Change Log
+
+- **2026-10-29 — AD-10:** Pedidos/Pagamentos depende de um contrato público versionado de prontidão que pertence a Retratos; reservas são por pedido/pacote, consumo por autorização e liberação exige terminalidade do provedor e reconciliação. A implementação de Retratos ainda não está neste repositório; produção permanece fechada.
 
 - **2026-10-27 — rota após pesquisa solicitada pelo proprietário:** adotar a recomendação de WhatsApp Cloud API diretamente pela Meta, sem BSP no piloto. Manter custo Meta desconhecido até confirmação no Billing Hub e bloquear operações pagas enquanto isso. A Data Policy v2 cobre PostgreSQL e Bucket privados sob controle da aplicação; comprovar a exclusão local antes de liberar coleta/processamento. Região e cópias Meta/Google não são gates operacionais da política. A decisão não habilita dados reais, flags de produção, chamadas externas, cobrança ou tráfego real.

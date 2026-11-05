@@ -7,10 +7,18 @@ import {
   PostgresBudgetRepository,
 } from '../adapters/postgres/budget-repository.js';
 import { emitPlatformEvent } from '../adapters/console/platform-events.js';
+import {
+  checkConversationRuntimeReadiness,
+  CONVERSATION_OUTBOUND_QUEUE,
+  ensureConversationsReady,
+  PostgresConversationRepository,
+} from '../adapters/postgres/conversation-repository.js';
+import { WhatsAppCloudApiAdapter } from '../adapters/whatsapp/cloud-api.js';
 import { PlatformSmoke } from '../modules/platform-smoke/use-cases.js';
 import { Budget } from '../modules/budget/use-cases.js';
 import { handlePlatformSmokeJob } from './platform-smoke-handler.js';
 import { handleBudgetTraceJob } from './budget-trace-handler.js';
+import { handleConversationOutboundJob } from './conversation-outbound-handler.js';
 import { createWorkerHealthServer } from './health-server.js';
 import type { Server } from 'node:http';
 
@@ -28,11 +36,13 @@ function safeErrorDetails(error: unknown): { errorName: string; errorCode?: stri
 
 let workerReady = false;
 let healthServer: Server | undefined;
+let conversationRetentionSweep: ReturnType<typeof setInterval> | undefined;
 
 async function listenForHealth(port: number): Promise<void> {
   healthServer = createWorkerHealthServer(async () => workerReady
     && await checkRuntimeReadiness()
-    && await checkBudgetRuntimeReadiness());
+    && await checkBudgetRuntimeReadiness()
+    && await checkConversationRuntimeReadiness());
   await new Promise<void>((resolve, reject) => {
     healthServer?.once('error', reject);
     healthServer?.listen(port, '0.0.0.0', resolve);
@@ -45,6 +55,7 @@ function structuredLog(event: string, details: Record<string, string | boolean |
 
 async function stop(boss: ReturnType<typeof getBoss>): Promise<void> {
   workerReady = false;
+  if (conversationRetentionSweep) clearInterval(conversationRetentionSweep);
   const closeHealth = healthServer
     ? new Promise<void>((resolve) => healthServer?.close(() => resolve()))
     : Promise.resolve();
@@ -59,8 +70,18 @@ async function main(): Promise<void> {
   await listenForHealth(healthPort);
   await ensureReady();
   await ensureBudgetReady();
+  await ensureConversationsReady();
   const smoke = new PlatformSmoke(new PostgresSmokeRepository());
   const budget = new Budget(new PostgresBudgetRepository());
+  const conversationRepository = new PostgresConversationRepository();
+  const whatsapp = new WhatsAppCloudApiAdapter(budget);
+  await conversationRepository.purgeExpired(new Date().toISOString());
+  conversationRetentionSweep = setInterval(() => {
+    void conversationRepository.purgeExpired(new Date().toISOString()).catch(() => {
+      structuredLog('conversation_retention_sweep_failed', { errorCode: 'retention_sweep_failed' });
+    });
+  }, 60 * 60 * 1_000);
+  conversationRetentionSweep.unref();
   const boss = getBoss();
   boss.on('error', (error) => structuredLog('queue_error', safeErrorDetails(error)));
   await boss.work(SMOKE_QUEUE, async (jobs) => {
@@ -101,6 +122,20 @@ async function main(): Promise<void> {
         jobId: job.id,
         attemptNumber: job.retryCount,
       }, { budget });
+    }
+  });
+  await boss.work(CONVERSATION_OUTBOUND_QUEUE, async (jobs) => {
+    for (const job of jobs) {
+      const data: unknown = job.data;
+      if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('invalid_job');
+      const jobData = data as { kind?: unknown; messageId?: unknown };
+      if (jobData.kind !== 'conversation-outbound'
+        || typeof jobData.messageId !== 'string'
+        || job.id !== jobData.messageId) throw new Error('invalid_job');
+      await handleConversationOutboundJob({ messageId: jobData.messageId, attemptNumber: job.retryCount }, {
+        repository: conversationRepository,
+        sender: whatsapp,
+      });
     }
   });
   workerReady = true;

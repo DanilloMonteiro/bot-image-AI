@@ -1,9 +1,9 @@
-import { isDataPolicyV1 } from '../../contracts/data-policy/v1.js';
+import { isDataPolicyV1 } from '../../contracts/data-policy/v1';
 import {
   isDataPolicyV2,
   type DataPolicyV2,
-} from '../../contracts/data-policy/v2.js';
-import { DATA_POLICY_V2 } from './policy-v2.js';
+} from '../../contracts/data-policy/v2';
+import { DATA_POLICY_V2 } from './policy-v2';
 
 export type DataPolicyBlockReasonV2 =
   | 'policy_missing'
@@ -60,4 +60,16 @@ export function decideDataUse(
   }
 
   return { allowed: true, action, version: readResult.policy.version };
+}
+
+/** Provider requests may use customer content only when the canonical process gate is open. */
+export function isProviderDataProcessingAllowed(): boolean {
+  const policy = readApprovedDataPolicy();
+  return policy.status === 'available' && decideDataUse(policy.policy, 'process').allowed;
+}
+
+/** The public inbound route cannot retain customer content until local deletion is verified. */
+export function isCustomerDataCollectionAllowed(): boolean {
+  const policy = readApprovedDataPolicy();
+  return policy.status === 'available' && decideDataUse(policy.policy, 'collect').allowed;
 }

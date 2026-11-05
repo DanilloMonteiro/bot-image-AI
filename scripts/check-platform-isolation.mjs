@@ -109,7 +109,7 @@ function responseCallsHaveNoStore(source, label, errors) {
   }
 }
 
-export function validatePlatformIsolation({ compose, dockerignore, envExample, smokePostRoute, smokeGetRoute, smokeRetryRoute, smokeSubmitHandler, smokeRetryHandler }) {
+export function validatePlatformIsolation({ compose, dockerignore, envExample, smokePostRoute, smokeGetRoute, smokeRetryRoute, smokeSubmitHandler, smokeRetryHandler, whatsappWebhookRoute, whatsappWebhookHandler, productionTrafficGate }) {
   const errors = [];
   const services = parseServices(compose);
   if (!services) errors.push('compose.yaml: missing services section');
@@ -178,6 +178,20 @@ export function validatePlatformIsolation({ compose, dockerignore, envExample, s
   }
   responseCallsHaveNoStore(smokeRetryHandler, 'POST /api/internal/smoke/{id}/retry', errors);
 
+  if (!/export\s+const\s+runtime\s*=\s*['"]nodejs['"]/.test(whatsappWebhookRoute)
+    || !/export\s+const\s+dynamic\s*=\s*['"]force-dynamic['"]/.test(whatsappWebhookRoute)) {
+    errors.push('POST /api/webhooks/whatsapp: route must use the Node runtime and be force-dynamic');
+  }
+  if (!/handleWhatsAppWebhookRequest\s*\(/.test(whatsappWebhookRoute)
+    || !/verifyWhatsAppSignature\s*\(/.test(whatsappWebhookHandler)
+    || !/x-hub-signature-256/.test(whatsappWebhookHandler)) {
+    errors.push('POST /api/webhooks/whatsapp: use the signed webhook boundary');
+  }
+  responseCallsHaveNoStore(whatsappWebhookHandler, 'POST /api/webhooks/whatsapp', errors);
+  if (!/pathname\s*===\s*['"]\/api\/webhooks\/whatsapp['"]/.test(productionTrafficGate)) {
+    errors.push('proxy: signed WhatsApp webhook path must be explicitly allowlisted');
+  }
+
   return errors;
 }
 
@@ -197,6 +211,9 @@ function main() {
       smokeRetryRoute: read(root, 'src/app/api/internal/smoke/[id]/retry/route.ts'),
       smokeSubmitHandler: read(root, 'src/adapters/http/smoke-submit-handler.ts'),
       smokeRetryHandler: read(root, 'src/adapters/http/smoke-retry-handler.ts'),
+      whatsappWebhookRoute: read(root, 'src/app/api/webhooks/whatsapp/route.ts'),
+      whatsappWebhookHandler: read(root, 'src/adapters/http/whatsapp-webhook-handler.ts'),
+      productionTrafficGate: read(root, 'src/adapters/http/production-traffic-gate.ts'),
     });
     if (errors.length) {
       console.error(errors.join('\n'));

@@ -3,7 +3,7 @@ title: 'EPIC 3 — Conversas e consentimento no WhatsApp'
 type: 'feature'
 ticket: 'EPIC 3 (stories 3.1–3.7)'
 created: '2026-11-05'
-status: 'built'
+status: 'in-progress'
 baseline_revision: 'd07210de39e8e769aee567989336e876a98219ab'
 route: 'full'
 route_source: 'auto'
@@ -67,6 +67,10 @@ context: []
 - Given approved text or consented synthetic audio, when handled, then replies follow FAQ policy, transcript only is persisted, and human/privacy handoffs are durable and unique.
 - Given the synthetic EPIC 3 suite, when run, then refusal, failure, revocation, and resume are covered with no real media, provider calls, or Orders/Payments writes.
 
+## Real Integration Completion Gate
+
+EPIC 3 remains in progress until one controlled real end-to-end test succeeds: send a text message from an authorized personal WhatsApp account to Meta's app-provisioned test number, receive it through the signed webhook, classify it using the real Gemini Vertex AI endpoint, and deliver exactly one approved FAQ reply through WhatsApp Cloud API. Record provider delivery evidence and reconcile actual costs without logging message contents or credentials. Use only text and synthetic test content; no real photos or production customer traffic. Run this only after the WhatsApp account, recipient, send rules, and cost are approved, Budget authorizes both provider calls, and the canonical Data Policy local-deletion gate is verified. The synthetic suite alone does not close EPIC 3.
+
 ## Implementation Notes
 
 - Implemented stories 3.1–3.7 across durable conversation state, WhatsApp text/audio intake, approved FAQ classification, eligibility and versioned consent, opt-out/revocation, and EPIC 5 handoff contracts.
@@ -76,6 +80,8 @@ context: []
 - `npm test` passed: Next.js build, worker TypeScript compilation, and 110 tests. Boundary, platform-isolation, and `git diff --check` checks passed. No live Meta/Gemini calls or PostgreSQL integration run was performed.
 
 ## Plan Change Log
+
+- 2026-11-05 — Isaac clarified that EPIC 3 must remain in progress until a controlled live WhatsApp + Gemini end-to-end test succeeds. Added the acceptance gate above; provider/data-policy/budget gates remain mandatory.
 
 ## Review Triage Log
 

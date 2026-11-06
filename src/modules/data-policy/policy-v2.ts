@@ -1,5 +1,5 @@
-import type { DataPolicyV2 } from '../../contracts/data-policy/v2.js';
-import { deepFreeze } from './deep-freeze.js';
+import type { DataPolicyV2 } from '../../contracts/data-policy/v2';
+import { deepFreeze } from './deep-freeze';
 
 /** Owner-approved 2026-10-27 policy. Real-data use stays closed until local deletion is proven. */
 export const DATA_POLICY_V2 = deepFreeze({

@@ -16,6 +16,9 @@ const baseline = {
   smokeRetryRoute: read('src/app/api/internal/smoke/[id]/retry/route.ts'),
   smokeSubmitHandler: read('src/adapters/http/smoke-submit-handler.ts'),
   smokeRetryHandler: read('src/adapters/http/smoke-retry-handler.ts'),
+  whatsappWebhookRoute: read('src/app/api/webhooks/whatsapp/route.ts'),
+  whatsappWebhookHandler: read('src/adapters/http/whatsapp-webhook-handler.ts'),
+  productionTrafficGate: read('src/adapters/http/production-traffic-gate.ts'),
 };
 
 test('valid local isolation configuration passes without Docker', () => {

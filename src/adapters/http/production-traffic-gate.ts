@@ -35,6 +35,7 @@ export function isPublicStoryPath(
     pathname === '/api/health'
     || pathname === '/api/internal/smoke'
     || pathname === '/api/internal/budget/trace'
+    || pathname === '/api/webhooks/whatsapp'
     || SMOKE_TASK_PATH.test(pathname)
   ) {
     return true;

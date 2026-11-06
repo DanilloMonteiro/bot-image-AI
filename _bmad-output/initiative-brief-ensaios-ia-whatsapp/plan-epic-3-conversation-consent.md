@@ -46,6 +46,8 @@ context: []
 
 - `_bmad-output/initiative-brief-ensaios-ia-whatsapp/epic-whatsapp-conversation-consent/tickets.toml` — exact scope and verification expectations for stories 3.1–3.7.
 - `_bmad-output/initiative-brief-ensaios-ia-whatsapp/architecture-ensaios-ia-whatsapp/architecture-ensaios-ia-whatsapp.md` and `_bmad-output/initiative-brief-ensaios-ia-whatsapp/ux-ensaios-ia-whatsapp/EXPERIENCE.md` — ownership, ordering, safety, channel, consent, and customer-facing rules.
+- `compose.epic3-local.yaml`, `.env.epic3.local.example`, `package.json`, and `docs/epic3-live-test.md` — isolated local provider-test setup; live flags remain false by default.
+- `scripts/check-epic3-postgres-retention.mjs` — synthetic, isolated PostgreSQL proof for seven-day conversation expiry and cascading deletion.
 - `src/modules/data-policy/policy-v2.ts` and `src/modules/data-policy/use-cases.ts` — approved policy and photo collect/process gate; reuse without changing readiness.
 - `src/modules/budget/use-cases.ts`, `src/contracts/budget/v1.ts` — authorization and cost reservation; never use synthetic reservation for provider calls.
 - `src/adapters/postgres/runtime.ts` and `src/adapters/postgres/smoke-repository.ts` — pool, transaction, worker, and durable/idempotent persistence patterns.
@@ -71,17 +73,37 @@ context: []
 
 EPIC 3 remains in progress until one controlled real end-to-end test succeeds: send a text message from an authorized personal WhatsApp account to Meta's app-provisioned test number, receive it through the signed webhook, classify it using the real Gemini Vertex AI endpoint, and deliver exactly one approved FAQ reply through WhatsApp Cloud API. Record provider delivery evidence and reconcile actual costs without logging message contents or credentials. Use only text and synthetic test content; no real photos or production customer traffic. Run this only after the WhatsApp account, recipient, send rules, and cost are approved, Budget authorizes both provider calls, and the canonical Data Policy local-deletion gate is verified. The synthetic suite alone does not close EPIC 3.
 
+### Local Test Setup Work
+
+- [x] Add `compose.epic3-local.yaml` with an isolated PostgreSQL instance bound only to localhost; do not change the existing synthetic smoke Compose stack or Railway production.
+- [x] Add `.env.epic3.local.example` with the database and WhatsApp/Gemini variable names used by the adapters. Keep every live-traffic/account/cost/send-rule flag `false`, leave credentials and unknown costs blank, and ensure only the template is tracked.
+- [x] Add `dev:epic3` and `start:worker:epic3` commands in `package.json` so the local web process and worker read the same ignored environment file and connect to the isolated database.
+- [x] Add `docs/epic3-live-test.md` with Meta test-number setup, tester allowlisting, signed webhook/HTTPS callback setup, Vertex AI/ADC setup, budget and privacy preconditions, local run commands, and cleanup. Do not document a fixed WhatsApp test number or put credentials in Git/chat.
+- [x] Verify local configuration and PostgreSQL conversation expiry using isolated synthetic data; the test removes customer, message, event, handoff, and receipt rows without opening the Data Policy gate.
+- [ ] Implement and evidence the approved deletion behavior for media objects in the Bucket. Keep `DATA_POLICY_V2.operationalReadiness.localDeletion` pending until both PostgreSQL and Bucket deletion are proven; do not bypass the canonical gate to make the live test pass.
+
+### External Preconditions
+
+- [ ] Isaac signs in to the Meta developer account and configures its app-provisioned WhatsApp test number, an authorized personal test recipient, webhook subscription, and the account/send/cost evidence.
+- [ ] Isaac identifies the approved Google Cloud project, enables the required Vertex AI service and billing controls, and provides local ADC or another approved credential path without sharing secrets in chat.
+- [ ] After all privacy, account, send-rule, and cost gates pass, run and record the controlled real text-only end-to-end test above. No production deployment or real-photo processing is part of this test.
+
 ## Implementation Notes
 
 - Implemented stories 3.1–3.7 across durable conversation state, WhatsApp text/audio intake, approved FAQ classification, eligibility and versioned consent, opt-out/revocation, and EPIC 5 handoff contracts.
+- Added a loopback-only local PostgreSQL service, a tracked environment template with all real-provider approvals disabled, shared local web/worker commands, and a setup runbook. The existing synthetic smoke stack and Railway production were not changed.
+- Added and ran a PostgreSQL retention check with synthetic identifiers and text. It verified deletion after the seven-day period for the conversation, customer, messages, inbound events, handoff, and delivery receipt. This does not prove Bucket media deletion or open `localDeletion`.
 - Conversations close 24 hours after the last inbound receipt. A later message within retention reuses the stable customer ID and opens a new conversation ID; active conversation and handoff metadata expire seven days after closure.
 - Ingress checks live traffic, account, cost, and Data Policy collection readiness before persistence. Each external adapter also checks the canonical Data Policy process gate, approval flags, and Budget before transport. These gates remain closed by default; no real media is accepted.
 - Outbound retries are limited to explicit HTTP 429 responses. Ambiguous provider outcomes are not resent and create an idempotent delivery handoff. Send-window time is checked after acquiring the per-customer lock.
-- `npm test` passed: Next.js build, worker TypeScript compilation, and 110 tests. Boundary, platform-isolation, and `git diff --check` checks passed. No live Meta/Gemini calls or PostgreSQL integration run was performed.
+- Review fixes now block sends after consent revocation, add idempotent handoffs for adapter-level blocked sends, and route ambiguous `sending` outbox rows to a handoff without resending.
+- `npm test` passed: Next.js build, worker TypeScript compilation, and 113 tests. Boundary, platform-isolation, and `git diff --check` checks passed. The local PostgreSQL retention integration check passed with synthetic data; no live Meta/Gemini calls have been made.
 
 ## Plan Change Log
 
 - 2026-11-05 — Isaac clarified that EPIC 3 must remain in progress until a controlled live WhatsApp + Gemini end-to-end test succeeds. Added the acceptance gate above; provider/data-policy/budget gates remain mandatory.
+- 2026-11-05 — Added an isolated local provider-test setup and a real PostgreSQL conversation-expiry check. The Data Policy gate remains pending because Bucket media deletion is still unimplemented/unproven; no provider credentials or live traffic were configured.
+- 2026-11-05 — Quick review fixes now stop queued replies after consent revocation, create safe idempotent handoffs for adapter-level blocks, and recover ambiguous outbound rows without resending. Focused and full verification pass; the real provider gate remains open.
 
 ## Review Triage Log
 
@@ -92,6 +114,10 @@ EPIC 3 remains in progress until one controlled real end-to-end test succeeds: s
 - [quick] `src/worker/conversation-outbound-handler.ts:18` — **medium / patch** — `now` is captured before waiting for the per-customer lock, then reused by `claimOutbound`; if the wait crosses the 24-hour boundary, an expired send can pass. Read the clock after acquiring the lock.
 - [self-audit] `src/adapters/postgres/conversation-repository.ts:781` — **medium / patch** — Expiring a conversation cascaded its messages and events but left the separate handoff envelope indefinitely; that envelope is conversation metadata covered by the seven-day policy. Delete handoffs for expiring conversations in the same purge transaction and cover the fixture behavior.
 - [self-audit] `src/app/api/webhooks/whatsapp/route.ts:22` — **high / patch** — The ingress gate checked traffic/account/cost but not Data Policy collection readiness, so real messages could still be stored while local deletion remained unverified. Check the canonical collect decision before composing or invoking persistence.
+- [quick] `src/adapters/postgres/conversation-repository.ts:603` — **high / patch** — `claimOutbound` selects `revocation_pending` but does not test it before setting the outbox to `sending`; a queued reply can therefore reach WhatsApp after consent revocation commits. Add a fail-closed claim guard consistent with the serialized revocation intent.
+- [quick] `src/worker/conversation-outbound-handler.ts:57`, `src/adapters/postgres/conversation-repository.ts:691` — **medium / patch** — Provider adapter blocks such as denied Budget, Data Policy, or missing configuration only mark the outbox blocked; they do not create the durable delivery handoff used for explicit send-rule/window blocks and failures. Preserve opt-out handling and create an idempotent handoff for unrecoverable adapter blocks.
+- [quick] `src/adapters/postgres/conversation-repository.ts:599` — **high / patch** — A retried job that finds an outbox row still `sending` returns `already_handled`, so an ambiguous attempt after worker/process failure is never retried or handed off. Keep it from being resent and record one durable delivery handoff.
+- [quick] `src/app/api/webhooks/whatsapp/route.ts:20`, `_bmad-output/initiative-brief-ensaios-ia-whatsapp/plan-epic-3-conversation-consent.md:72` — **medium / defer** — The controlled real WhatsApp-to-Vertex Gemini test has not run; the plan remains in progress and its external preconditions and Bucket-deletion proof are still unchecked. Preserve this open completion gate until approved external access and deletion evidence exist and the real test succeeds.
 
 ## Design Notes
 
@@ -100,7 +126,9 @@ The EPIC 5 handoff is a minimal versioned envelope: stable internal conversation
 ## Verification
 
 **Commands:**
-- `npm test` — build plus repository test suite passes.
+- `npm test` — build plus 113 repository tests pass.
+- `npm run check:epic3:postgres-retention` — isolated PostgreSQL retention proof passes using synthetic data.
+- `docker compose --env-file .env.epic3.local.example -f compose.epic3-local.yaml -p epic3-test config` — isolated service binds only to `127.0.0.1`.
 - `npm run check:boundaries` — module boundaries pass.
 - `npm run check:platform-isolation` — public route and environment isolation checks pass.
 - `git diff --check` — no whitespace errors.

@@ -200,11 +200,17 @@ export class MemoryConversationRepository {
     const outbox = this.outbox.get(messageId);
     const message = this.messages.get(messageId);
     if (!outbox || !message) return { status: 'not_found' };
+    if (outbox.status === 'sending') {
+      Object.assign(outbox, { status: 'blocked', blockReason: 'delivery_outcome_unknown' });
+      this.createDeliveryHandoff(message, 'delivery_failure', now);
+      return { status: 'blocked', reason: 'already_handled' };
+    }
     if (outbox.status !== 'pending') return { status: 'blocked', reason: 'already_handled' };
     const customer = [...this.customers.values()].find((item) => item.customerId === message.customerId);
     const conversation = this.conversations.get(message.conversationId);
     const reason = customer?.optedOut ? 'opted_out'
-      : !sendRulesVerified ? 'send_rules_unknown'
+      : conversation?.revocationPending || conversation?.consentStatus === 'revoked' ? 'revoked'
+        : !sendRulesVerified ? 'send_rules_unknown'
         : Date.parse(now) - Date.parse(conversation.lastInboundAt) >= IDLE_MS
           ? 'outside_service_window' : null;
     if (reason) {
@@ -242,6 +248,8 @@ export class MemoryConversationRepository {
     const outbox = this.outbox.get(messageId);
     if (outbox && ['pending', 'sending'].includes(outbox.status)) {
       Object.assign(outbox, { status: 'blocked', blockReason: reason });
+      const message = this.messages.get(messageId);
+      if (message) this.createDeliveryHandoff(message, 'delivery_failure', new Date().toISOString());
     }
   }
 

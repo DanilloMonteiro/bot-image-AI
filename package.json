@@ -4,9 +4,12 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "next dev",
+    "dev:epic3": "node --env-file=.env.epic3.local node_modules/next/dist/bin/next dev",
     "build": "next build && tsc -p tsconfig.worker.json",
+    "check:epic3:postgres-retention": "node --env-file=.env.epic3.local scripts/check-epic3-postgres-retention.mjs",
     "start:web": "next start -H 0.0.0.0",
     "start:worker": "node dist/worker/index.js",
+    "start:worker:epic3": "node --env-file=.env.epic3.local dist/worker/index.js",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:platform-isolation": "node scripts/check-platform-isolation.mjs",
     "test": "npm run build && node --test tests/*.test.mjs",

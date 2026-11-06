@@ -586,7 +586,7 @@ export class PostgresConversationRepository implements ConversationRepository {
       const selected = await client.query(
         `SELECT o.status AS outbox_status, m.message_id, m.customer_id, m.conversation_id, m.text,
                 m.delivery_state, m.provider_message_id, c.external_customer_id, c.opted_out_at,
-                c.channel_id, v.last_inbound_at, v.revocation_pending
+                c.channel_id, v.last_inbound_at, v.revocation_pending, v.consent_status
          FROM conversation_outbox o
          JOIN conversation_messages m ON m.message_id = o.message_id
          JOIN conversation_customers c ON c.customer_id = m.customer_id
@@ -596,13 +596,30 @@ export class PostgresConversationRepository implements ConversationRepository {
       );
       const row = selected.rows[0] as Record<string, unknown> | undefined;
       if (!row) { await client.query('COMMIT'); return { status: 'not_found' }; }
+      if (row.outbox_status === 'sending') {
+        await client.query(
+          `UPDATE conversation_outbox SET status = 'blocked', block_reason = 'delivery_outcome_unknown', updated_at = $2
+           WHERE message_id = $1 AND status = 'sending'`, [messageId, now],
+        );
+        await insertDeliveryHandoff(client, {
+          messageId,
+          customerId: String(row.customer_id),
+          conversationId: String(row.conversation_id),
+          reason: 'delivery_failure',
+          createdAt: now,
+        });
+        await client.query('COMMIT');
+        return { status: 'blocked', reason: 'already_handled' };
+      }
       if (row.outbox_status !== 'pending') {
         await client.query('COMMIT');
         return { status: 'blocked', reason: 'already_handled' };
       }
       const optedOut = row.opted_out_at !== null;
+      const revoked = Boolean(row.revocation_pending) || row.consent_status === 'revoked';
       const reason = optedOut ? 'opted_out'
-        : !sendRulesVerified ? 'send_rules_unknown'
+        : revoked ? 'revoked'
+          : !sendRulesVerified ? 'send_rules_unknown'
           : new Date(now).getTime() - new Date(row.last_inbound_at as Date).getTime() >= IDLE_CLOSE_MS
             ? 'outside_service_window' : null;
       if (reason) {
@@ -690,10 +707,35 @@ export class PostgresConversationRepository implements ConversationRepository {
 
   async markOutboundBlocked(messageId: string, reason: string): Promise<void> {
     await ensureConversationsReady();
-    await getPool().query(
-      `UPDATE conversation_outbox SET status = 'blocked', block_reason = $2, updated_at = now()
-       WHERE message_id = $1 AND status IN ('pending', 'sending')`, [messageId, reason.slice(0, 80)],
-    );
+    const client = await getPool().connect();
+    try {
+      await client.query('BEGIN');
+      const selected = await client.query(
+        `SELECT o.status, m.customer_id, m.conversation_id
+         FROM conversation_outbox o JOIN conversation_messages m ON m.message_id = o.message_id
+         WHERE o.message_id = $1 FOR UPDATE OF o, m`, [messageId],
+      );
+      const row = selected.rows[0] as Record<string, unknown> | undefined;
+      if (row && ['pending', 'sending'].includes(String(row.status))) {
+        const blockedAt = new Date().toISOString();
+        await client.query(
+          `UPDATE conversation_outbox SET status = 'blocked', block_reason = $2, updated_at = $3
+           WHERE message_id = $1 AND status IN ('pending', 'sending')`,
+          [messageId, reason.slice(0, 80), blockedAt],
+        );
+        await insertDeliveryHandoff(client, {
+          messageId,
+          customerId: String(row.customer_id),
+          conversationId: String(row.conversation_id),
+          reason: 'delivery_failure',
+          createdAt: blockedAt,
+        });
+      }
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally { client.release(); }
   }
 
   async markOutboundRetryable(messageId: string, reason: string): Promise<void> {

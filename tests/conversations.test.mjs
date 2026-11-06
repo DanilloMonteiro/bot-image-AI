@@ -453,6 +453,7 @@ test('channel rules, opt-out, expiry, and delivery receipts fail closed and neve
   });
   assert.equal(sends, 0);
   assert.equal(repository.outbox.get(second.replyMessageId).blockReason, 'opted_out');
+  assert.equal(repository.handoffs.has(`delivery:${second.replyMessageId}`), false);
 
   const plainLanguageOptOut = await conversations.handleText(inbound({
     providerEventId: 'send-rule-plain-opt-out', externalCustomerId: '5511999995555',
@@ -494,6 +495,76 @@ test('channel rules, opt-out, expiry, and delivery receipts fail closed and neve
   assert.equal(repository.outbox.get(expired.replyMessageId).blockReason, 'outside_service_window');
   assert.equal(repository.handoffs.get(`delivery:${expired.replyMessageId}`).reason, 'outside_service_window');
   assert.equal(sends, 0);
+});
+
+test('consent revocation blocks an already queued reply before sender transport', async () => {
+  const repository = new MemoryConversationRepository();
+  const conversations = new Conversations(repository);
+  const queued = await conversations.handleText(inbound({ providerEventId: 'revocation-queued-reply' }));
+  const revoked = await conversations.handleText(inbound({
+    providerEventId: 'revocation-before-send', text: 'revogar meu consentimento',
+    receivedAt: at(10), occurredAt: at(10),
+  }));
+  assert.equal(repository.conversations.get(revoked.conversationId).revocationPending, true);
+
+  let sends = 0;
+  await handleConversationOutboundJob({ messageId: queued.replyMessageId }, {
+    repository,
+    sender: { async sendText() { sends += 1; return { status: 'accepted', providerMessageId: 'must-not-send' }; } },
+    environment: { WHATSAPP_SEND_RULES_VERIFIED: 'true' }, now: () => at(10),
+  });
+
+  assert.equal(sends, 0);
+  assert.equal(repository.outbox.get(queued.replyMessageId).blockReason, 'revoked');
+  assert.equal(repository.handoffs.has(`delivery:${queued.replyMessageId}`), false);
+});
+
+test('adapter-blocked outbound sends create one safe durable delivery handoff', async () => {
+  const repository = new MemoryConversationRepository();
+  const conversations = new Conversations(repository);
+  const queued = await conversations.handleText(inbound({ providerEventId: 'adapter-blocked-send' }));
+  let sends = 0;
+  const dependencies = {
+    repository,
+    sender: { async sendText() { sends += 1; return { status: 'blocked', reason: 'budget_balance_unknown' }; } },
+    environment: { WHATSAPP_SEND_RULES_VERIFIED: 'true' }, now: () => at(10),
+  };
+
+  await handleConversationOutboundJob({ messageId: queued.replyMessageId }, dependencies);
+  await handleConversationOutboundJob({ messageId: queued.replyMessageId }, dependencies);
+
+  assert.equal(sends, 1);
+  assert.equal(repository.outbox.get(queued.replyMessageId).blockReason, 'budget_balance_unknown');
+  const handoff = repository.handoffs.get(`delivery:${queued.replyMessageId}`);
+  assert.equal(handoff.reason, 'delivery_failure');
+  assert.equal(handoff.safeContext, 'delivery');
+  assert.equal(isHandoffContractV1(handoff), true);
+  assert.equal([...repository.handoffs.keys()].filter((key) => key === `delivery:${queued.replyMessageId}`).length, 1);
+});
+
+test('a redelivered sending outbox is treated as ambiguous without resending', async () => {
+  const repository = new MemoryConversationRepository();
+  const conversations = new Conversations(repository);
+  const queued = await conversations.handleText(inbound({ providerEventId: 'ambiguous-sending-outbox' }));
+  Object.assign(repository.outbox.get(queued.replyMessageId), { status: 'sending' });
+  let sends = 0;
+  const dependencies = {
+    repository,
+    sender: { async sendText() { sends += 1; return { status: 'accepted', providerMessageId: 'must-not-resend' }; } },
+    environment: { WHATSAPP_SEND_RULES_VERIFIED: 'true' }, now: () => at(10),
+  };
+
+  await handleConversationOutboundJob({ messageId: queued.replyMessageId }, dependencies);
+  await handleConversationOutboundJob({ messageId: queued.replyMessageId }, dependencies);
+
+  assert.equal(sends, 0);
+  assert.equal(repository.outbox.get(queued.replyMessageId).status, 'blocked');
+  assert.equal(repository.outbox.get(queued.replyMessageId).blockReason, 'delivery_outcome_unknown');
+  const handoff = repository.handoffs.get(`delivery:${queued.replyMessageId}`);
+  assert.equal(handoff.reason, 'delivery_failure');
+  assert.equal(handoff.safeContext, 'delivery');
+  assert.equal(isHandoffContractV1(handoff), true);
+  assert.equal([...repository.handoffs.keys()].filter((key) => key === `delivery:${queued.replyMessageId}`).length, 1);
 });
 
 test('outbound retries only explicit safe rejections and records terminal provider failures for recovery', async () => {
